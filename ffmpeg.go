@@ -15,12 +15,11 @@ import (
 // FFMpeg wraps the ffmpeg binary.
 type FFMpeg struct {
 	Dir       string
-	FPS       float64
 	LeaveMess bool
 }
 
 // Extract the frames between start and end from the video file.
-func (f FFMpeg) Extract(video string, start, end float64) ([]image.Image, error) {
+func (f FFMpeg) Extract(video string, start, end, fps float64) ([]image.Image, error) {
 	os.RemoveAll(f.Dir)
 	if !f.LeaveMess {
 		defer os.RemoveAll(f.Dir)
@@ -33,13 +32,13 @@ func (f FFMpeg) Extract(video string, start, end float64) ([]image.Image, error)
 	if err != nil {
 		return nil, errors.Wrap(err, "cutting video file")
 	}
-	if f.FPS == 0 {
-		f.FPS = 24.0
+	if fps == 0 {
+		fps = 24.4
 	}
 	// ffmpeg -i file.mp4 -r 1/1 $filename%03d.jpg
 	if err := f.run(
 		"-i", cut,
-		"-vf", fmt.Sprintf("fps=%2f", f.FPS),
+		"-vf", fmt.Sprintf("fps=%2f", fps),
 		filepath.Join(f.Dir, "frames", "$frame%03d.jpg"),
 	); err != nil {
 		return nil, errors.Wrap(err, "extracting frames")

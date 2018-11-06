@@ -47,10 +47,9 @@ func main() {
 	}
 	ffmpeg := giffer.FFMpeg{
 		Dir:       "./tmp/ffmpeg",
-		FPS:       fps,
 		LeaveMess: true,
 	}
-	frames, err := ffmpeg.Extract(videofile, start, end)
+	frames, err := ffmpeg.Extract(videofile, start, end, fps)
 	if err != nil {
 		log.Fatalf("extracting frames: %v", err)
 	}
