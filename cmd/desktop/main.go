@@ -1,6 +1,7 @@
 package main
 
 import (
+	"os"
 	"net/http/httputil"
 	"net/url"
 	"bytes"
@@ -65,6 +66,8 @@ func main() {
 	svr := &http.Server{
 		Addr:         fmt.Sprintf(":%s", port),
 		Handler:      ui,
+		// Can't use these time-outs yet since the gifify route doesn't
+		// return immediately (downloads 400MB, etc...).
 		// WriteTimeout: 15 * time.Second,
 		// ReadTimeout:  15 * time.Second,
 	}
@@ -102,17 +105,18 @@ func (ui *UI) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 func (ui *UI) routes() {
+	log := Log{
+		Logger: log.New(os.Stdout, "", 0),
+		ShowBody: true,
+	}
+	ui.Router.Handle("/gifify", Wrap(ui.gifify(), log))
 	// The router typically treats "/" as a unique router We have to tell
 	// it otherwise in order to handle file paths correctly.
-	ui.Router.HandleFunc("/gifify", ui.gifify())
-	ui.Router.Handle("/{path:.*}", ui.Static)
+	ui.Router.Handle("/{path:.*}", Wrap(ui.Static, log))
 }
 
 func (ui *UI) gifify() http.HandlerFunc {
-	log.Printf("gifify route registered")
 	return func(w http.ResponseWriter, r *http.Request) {
-		log.Printf("%s /gifify", r.Method)
-		defer log.Printf("done")
 		defer r.Body.Close()
 		type request struct {
 			URL    string  `json:"url,omitempty"`
@@ -128,7 +132,6 @@ func (ui *UI) gifify() http.HandlerFunc {
 			ui.error(w, errors.Wrap(err, "decoding json request"))
 			return
 		}
-		log.Printf("%#v", req)
 		img, err := ui.App.GififyURL(
 			req.URL,
 			req.Start,
@@ -254,4 +257,51 @@ func (p Proxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	r.Header.Set("X-Forwarded-Host", r.Header.Get("Host"))
 	r.Host = p.Target.Host
 	proxy.ServeHTTP(w, r)
+}
+
+// Log creates middleware that logs requests.
+// If out is nil it is assumed that no logs are desired.
+type Log struct {
+	Logger *log.Logger
+	ShowBody bool
+}
+
+// Wrap the handler with logging middleware.
+func (l Log) Wrap(next http.Handler) http.Handler {
+	if l.Logger == nil {
+		return next
+	}
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var msg = &strings.Builder{}
+		fmt.Fprintf(msg, "%s %s", r.Method, r.URL)
+		if l.ShowBody {
+			by, _ := readUntil(r.Body, 1000*64) // 64Kb
+			if len(by) > 0 {
+				fmt.Fprintf(msg, " body:\n%s\n", string(by))
+			}
+		}
+		l.Logger.Printf(msg.String())
+		next.ServeHTTP(w, r)
+	})
+}
+
+func readUntil(r io.Reader, until int64) ([]byte, error) {
+	buf := bytes.NewBuffer(nil)
+	if _, err := io.CopyN(buf, r, until); err != nil && err != io.EOF {
+		return buf.Bytes(), err
+	}
+	return buf.Bytes(), nil
+}
+
+// Wrapper wraps an http.Handler to provide things like middleware.
+type Wrapper interface {
+	Wrap(http.Handler) http.Handler
+}
+
+// Wrap the handler with the provided wrappers.
+func Wrap(h http.Handler, wrappers ...Wrapper) http.Handler {
+	for _, w := range wrappers {
+		h = w.Wrap(h)
+	}
+	return h
 }
