@@ -1,13 +1,26 @@
 package main
 
 import (
+	"net/http/httputil"
+	"net/url"
+	"bytes"
+	"encoding/json"
 	"flag"
 	"fmt"
+	"image"
+	"image/gif"
+	"io"
 	"log"
 	"net/http"
+	"path/filepath"
+	"strings"
 	"sync"
 
+	"github.com/disintegration/imaging"
+	"github.com/jackmordaunt/giffer"
+
 	"github.com/GeertJohan/go.rice"
+	"github.com/pkg/errors"
 
 	"github.com/gorilla/mux"
 
@@ -16,21 +29,44 @@ import (
 
 var (
 	port string
+	proxy string
+	static http.Handler // responsible for serving UI files. 
 )
 
 func init() {
 	flag.StringVar(&port, "p", "8080", "port to serve on")
+	flag.StringVar(&proxy, "dev-proxy", "", "proxy to forward to (eg, yarn run serve)")
 	flag.Parse()
+	if proxy != "" {
+		t, err := url.Parse(proxy)
+		if err != nil {
+			log.Fatalf("proxy: %s: not a valid URL", proxy)
+		}
+		static = &Proxy{Target: t}
+	} else {
+		static = http.FileServer(rice.MustFindBox("ui/dist").HTTPBox())
+	}
 }
 
 func main() {
 	ui := &UI{
+		App: &Giffer{
+			Downloader: &giffer.Downloader{
+				Dir: "tmp/download",
+			},
+			FFMpeg: &giffer.FFMpeg{
+				Dir: "tmp/ffmpeg",
+				LeaveMess: true,
+			},
+		},
 		Router: mux.NewRouter(),
-		Static: http.FileServer(rice.MustFindBox("ui").HTTPBox()),
+		Static: static,
 	}
 	svr := &http.Server{
-		Addr:    fmt.Sprintf(":%s", port),
-		Handler: ui,
+		Addr:         fmt.Sprintf(":%s", port),
+		Handler:      ui,
+		// WriteTimeout: 15 * time.Second,
+		// ReadTimeout:  15 * time.Second,
 	}
 	go func() {
 		if err := svr.ListenAndServe(); err != nil {
@@ -52,6 +88,7 @@ func main() {
 // This UI is extremely simple, consisting of exactly one page, as such we refer
 // to that markup simply as "Template".
 type UI struct {
+	App    *Giffer
 	Router *mux.Router
 	Static http.Handler
 	init   sync.Once
@@ -65,15 +102,156 @@ func (ui *UI) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 func (ui *UI) routes() {
-	ui.Router.Handle("/", ui.serveHTML())
+	// The router typically treats "/" as a unique router We have to tell
+	// it otherwise in order to handle file paths correctly.
+	ui.Router.HandleFunc("/gifify", ui.gifify())
+	ui.Router.Handle("/{path:.*}", ui.Static)
 }
 
-func (ui *UI) serveHTML() http.HandlerFunc {
+func (ui *UI) gifify() http.HandlerFunc {
+	log.Printf("gifify route registered")
 	return func(w http.ResponseWriter, r *http.Request) {
-		ui.Static.ServeHTTP(w, r)
+		log.Printf("%s /gifify", r.Method)
+		defer log.Printf("done")
+		defer r.Body.Close()
+		type request struct {
+			URL    string  `json:"url,omitempty"`
+			Start  float64 `json:"start,omitempty"`
+			End    float64 `json:"end,omitempty"`
+			FPS    float64 `json:"fps,omitempty"`
+			Width  int     `json:"width,omitempty"`
+			Height int     `json:"height,omitempty"`
+			Output string  `json:"output,omitempty"`
+		}
+		var req request
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			ui.error(w, errors.Wrap(err, "decoding json request"))
+			return
+		}
+		log.Printf("%#v", req)
+		img, err := ui.App.GififyURL(
+			req.URL,
+			req.Start,
+			req.End,
+			req.FPS,
+			req.Width,
+			req.Height)
+		if err != nil {
+			ui.error(w, err)
+			return
+		}
+		w.Header().Set("Content-Type", http.DetectContentType(img.Bytes()))
+		w.Header().Set("Content-Disposition", fmt.Sprintf(`attachment; filename="%s"`, img.FileName))
+		if _, err := io.Copy(w, img); err != nil {
+			ui.error(w, errors.Wrap(err, "writing response"))
+			return
+		}
 	}
 }
 
 func (ui *UI) error(w http.ResponseWriter, err error) {
 	http.Error(w, err.Error(), http.StatusInternalServerError)
+}
+
+// Giffer wraps the giffer business logic.
+type Giffer struct {
+	*giffer.Downloader
+	*giffer.FFMpeg
+}
+
+// GififyURL downloads the video at url and creates a .gif based on the spcified
+// parameters.
+func (g Giffer) GififyURL(
+	url string,
+	start, end, fps float64,
+	width, height int,
+) (*RenderedGif, error) {
+	videofile, err := g.Download(url)
+	if err != nil {
+		return nil, errors.Wrap(err, "downloading")
+	}
+	frames, err := g.Extract(videofile, start, end, fps)
+	if err != nil {
+		return nil, errors.Wrap(err, "extracting frames")
+	}
+	type processed struct {
+		Img   *image.Paletted
+		Index int
+	}
+	images := make(chan processed)
+	wg := &sync.WaitGroup{}
+	wg.Add(len(frames))
+	for ii, frame := range frames {
+		ii := ii
+		frame := frame
+		go func() {
+			defer wg.Done()
+			if width != 0 || height != 0 {
+				frame = imaging.Resize(frame, width, height, imaging.Box)
+			}
+			buf := bytes.Buffer{}
+			if err := gif.Encode(&buf, frame, nil); err != nil {
+				// errors.Wrap(err, "encoding gif")
+				return
+			}
+			tmpimg, err := gif.Decode(&buf)
+			if err != nil {
+				// errors.Wrap(err, "decoding gif")
+				return
+			}
+			images <- processed{
+				Img:   tmpimg.(*image.Paletted),
+				Index: ii,
+			}
+		}()
+	}
+	go func() {
+		wg.Wait()
+		close(images)
+	}()
+	paletted := make([]*image.Paletted, len(frames))
+	for frame := range images {
+		paletted[frame.Index] = frame.Img
+	}
+	delays := make([]int, len(frames))
+	delay := int(100 / fps)
+	for ii := range delays {
+		delays[ii] = delay
+	}
+	buf := bytes.NewBuffer(nil)
+	cfg := &gif.GIF{
+		Image:     paletted,
+		Delay:     delays,
+		LoopCount: 0,
+	}
+	if err := gif.EncodeAll(buf, cfg); err != nil {
+		return nil, errors.Wrap(err, "encoding animated gif")
+	}
+	r := &RenderedGif{
+		Buffer: buf,
+		// Keep the title but replace the .mp4 extension with .gif
+		FileName: strings.Split(filepath.Base(videofile), ".")[0] + ".gif",
+	}
+	return r, nil
+}
+
+// RenderedGif wraps the gif data with some metadata.
+type RenderedGif struct {
+	*bytes.Buffer
+	// FileName is <title>.<ext>
+	FileName string
+}
+
+// Proxy incoming requests to target.
+type Proxy struct {
+	Target *url.URL
+}
+
+func (p Proxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	proxy := httputil.NewSingleHostReverseProxy(p.Target)
+	r.URL.Host = p.Target.Host
+	r.URL.Scheme = p.Target.Scheme
+	r.Header.Set("X-Forwarded-Host", r.Header.Get("Host"))
+	r.Host = p.Target.Host
+	proxy.ServeHTTP(w, r)
 }
