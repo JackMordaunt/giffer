@@ -30,18 +30,18 @@ import (
 
 var (
 	port string
-	proxy string
+	devServer string
 	static http.Handler // responsible for serving UI files. 
 )
 
 func init() {
 	flag.StringVar(&port, "p", "8080", "port to serve on")
-	flag.StringVar(&proxy, "dev-proxy", "", "proxy to forward to (eg, yarn run serve)")
+	flag.StringVar(&devServer, "dev-proxy", "", "proxy to forward to (eg, yarn run serve)")
 	flag.Parse()
-	if proxy != "" {
-		t, err := url.Parse(proxy)
+	if devServer != "" {
+		t, err := url.Parse(devServer)
 		if err != nil {
-			log.Fatalf("proxy: %s: not a valid URL", proxy)
+			log.Fatalf("proxy: %s: not a valid URL", devServer)
 		}
 		static = &Proxy{Target: t}
 	} else {
