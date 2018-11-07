@@ -273,13 +273,30 @@ func (l Log) Wrap(next http.Handler) http.Handler {
 	}
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var msg = &strings.Builder{}
-		fmt.Fprintf(msg, "%s %s", r.Method, r.URL)
+		fmt.Fprintf(msg, "URL:         %s\n", r.URL)
+		fmt.Fprintf(msg, "Method:      %s\n", r.Method)
+		fmt.Fprintf(msg, "Headers:     http.Header{\n")
+		for h, v := range r.Header {
+			fmt.Fprintf(msg, "\t%q: {", h)
+			for ii := range v {
+				fmt.Fprintf(msg, "%s", v[ii])
+				if ii != len(v)-1 {
+					fmt.Fprint(msg, ",")
+				}
+			}
+			fmt.Fprintf(msg, "},\n")
+		}
+		fmt.Fprintf(msg, "}\n")
+		if r.Response != nil {
+			fmt.Fprintf(msg, "Status Code: %d\n", r.Response.StatusCode)
+		}
 		if l.ShowBody {
 			by, _ := readUntil(r.Body, 1000*64) // 64Kb
 			if len(by) > 0 {
-				fmt.Fprintf(msg, " body:\n%s\n", string(by))
+				fmt.Fprintf(msg, " Body:       %s\n", string(by))
 			}
 		}
+		fmt.Fprintf(msg, "\n")
 		l.Logger.Printf(msg.String())
 		next.ServeHTTP(w, r)
 	})
