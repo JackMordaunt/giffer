@@ -88,8 +88,6 @@ func main() {
 }
 
 // UI serves the user interface over http.
-// This UI is extremely simple, consisting of exactly one page, as such we refer
-// to that markup simply as "Template".
 type UI struct {
 	App    *Giffer
 	Router *mux.Router
