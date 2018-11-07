@@ -1,6 +1,7 @@
 package giffer
 
 import (
+	"strings"
 	"os"
 	"github.com/jackmordaunt/video-downloader/config"
 	"github.com/pkg/errors"
@@ -35,18 +36,55 @@ type Downloader struct {
 
 // Download the video from URL into Dir and return the full path to the 
 // downloaded file.
-func (dl Downloader) Download(URL string) (string, error) {
+func (dl Downloader) Download(URL string, q Quality) (string, error) {
 	if err := os.MkdirAll(dl.Dir, 0755); err != nil && err != os.ErrExist {
 		return "", errors.Wrap(err, "preparing directories")
 	}
 	// Side channel for loading config because of how the package is
 	// unfortunately structured.
 	config.OutputPath = dl.Dir
-	return Download(URL)
+	return Download(URL, q)
 }
 
+// Quality is an enum representing the various video qualities.
+type Quality int 
+
+// Matches returns true if the input represents the quality as a string.
+// This is primarily an adaptor so we don't have to change the video-downloader
+// package.
+func (q Quality) Matches(str string) bool {
+	var patterns []string
+	switch q {
+	case Best: 
+		patterns = append(patterns, "1080p")
+	case High: 
+		patterns = append(patterns, "720p", "480p")
+	case Medium: 
+		patterns = append(patterns, "360p")
+	case Low: 
+		patterns = append(patterns, "240p", "144p")
+	}
+	for _, p := range patterns {
+		if strings.Contains(str, p) {
+			return true
+		}
+	}
+	return false
+}
+
+const (
+	// Low 144p
+	Low Quality = iota
+	// Medium 360p
+	Medium 
+	// High 720p
+	High
+	// Best 1080p@60 > 720p@60 > 1080p > 720p
+	Best
+)
+
 // Download a video from the specified url.
-func Download(videoURL string) (string, error) {
+func Download(videoURL string, quality Quality) (string, error) {
 	var (
 		domain string
 		err    error
@@ -112,6 +150,12 @@ func Download(videoURL string) (string, error) {
 	for _, item := range data {
 		if item.Err != nil {
 			return "", errors.Wrap(item.Err, "extracting")
+		}
+		for k, stream := range item.Streams {
+			if quality.Matches(stream.Quality) {
+				config.Stream = k
+				break
+			}
 		}
 		path, err = item.Download(videoURL)
 		if err != nil {

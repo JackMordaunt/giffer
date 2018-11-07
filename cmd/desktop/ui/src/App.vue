@@ -37,9 +37,21 @@
                     <input name="fps" type="number" placeholder="24" min="0" v-model="form.fps">
                 </span>
                 <span class="form-group">
+                    <label>quality</label> 
+                    <select name="quality" v-model="form.quality">
+                        <option value="0">Low</option>
+                        <option value="1">Medium</option>
+                        <option value="2">High</option>
+                        <option value="3">Best</option>
+                    </select>
+                </span>
+                <span class="form-group">
                     <button type="submit">Submit</button>
                 </span>
             </form>
+        </div>
+        <div id="img" class="row">
+            
         </div>
         <div class="row">
             <pre v-if="errors.length > 0" class="errors">
@@ -68,6 +80,7 @@ export default {
                 width: 350,
                 height: 0,
                 fps: 24,
+                quality: 0,
             },
             loading: false,
             errors: [],
@@ -77,9 +90,15 @@ export default {
         submit() {
             console.log("submit")
             this.loading = true
+            this.form.quality = Number(this.form.quality)
             axios.post("gifify", this.form)
                 .then(resp => {
-                    console.log(resp)
+                    let mime = resp.headers["content-type"]
+                    console.log(mime)
+                    let decoded = btoa(resp.data)
+                    let img = new ImageData()
+                    img.src = `data:${mime};base64,${decoded}`
+                    document.getElementById("#img").appendChild(img)
                 })
                 .catch(err => {
                     console.log(err)

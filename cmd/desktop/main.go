@@ -1,9 +1,7 @@
 package main
 
 import (
-	"os"
-	"net/http/httputil"
-	"net/url"
+	"runtime/debug"
 	"bytes"
 	"encoding/json"
 	"flag"
@@ -13,6 +11,9 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"net/http/httputil"
+	"net/url"
+	"os"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -29,9 +30,9 @@ import (
 )
 
 var (
-	port string
+	port      string
 	devServer string
-	static http.Handler // responsible for serving UI files. 
+	static    http.Handler // responsible for serving UI files.
 )
 
 func init() {
@@ -56,7 +57,7 @@ func main() {
 				Dir: "tmp/download",
 			},
 			FFMpeg: &giffer.FFMpeg{
-				Dir: "tmp/ffmpeg",
+				Dir:       "tmp/ffmpeg",
 				LeaveMess: true,
 			},
 		},
@@ -64,8 +65,8 @@ func main() {
 		Static: static,
 	}
 	svr := &http.Server{
-		Addr:         fmt.Sprintf(":%s", port),
-		Handler:      ui,
+		Addr:    fmt.Sprintf(":%s", port),
+		Handler: ui,
 		// Can't use these time-outs yet since the gifify route doesn't
 		// return immediately (downloads 400MB, etc...).
 		// WriteTimeout: 15 * time.Second,
@@ -104,7 +105,7 @@ func (ui *UI) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 func (ui *UI) routes() {
 	log := Log{
-		Logger: log.New(os.Stdout, "", 0),
+		Logger:   log.New(LogWriteHeaderErrors{Out: os.Stdout}, "", 0),
 		ShowBody: true,
 	}
 	ui.Router.Handle("/gifify", Wrap(ui.gifify(), log))
@@ -117,13 +118,14 @@ func (ui *UI) gifify() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		defer r.Body.Close()
 		type request struct {
-			URL    string  `json:"url,omitempty"`
-			Start  float64 `json:"start,omitempty"`
-			End    float64 `json:"end,omitempty"`
-			FPS    float64 `json:"fps,omitempty"`
-			Width  int     `json:"width,omitempty"`
-			Height int     `json:"height,omitempty"`
-			Output string  `json:"output,omitempty"`
+			URL     string  `json:"url,omitempty"`
+			Start   float64 `json:"start,omitempty"`
+			End     float64 `json:"end,omitempty"`
+			FPS     float64 `json:"fps,omitempty"`
+			Width   int     `json:"width,omitempty"`
+			Height  int     `json:"height,omitempty"`
+			Output  string  `json:"output,omitempty"`
+			Quality int     `json:"quality,omitempty"`
 		}
 		var req request
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -136,7 +138,8 @@ func (ui *UI) gifify() http.HandlerFunc {
 			req.End,
 			req.FPS,
 			req.Width,
-			req.Height)
+			req.Height,
+			giffer.Quality(req.Quality))
 		if err != nil {
 			ui.error(w, err)
 			return
@@ -166,8 +169,9 @@ func (g Giffer) GififyURL(
 	url string,
 	start, end, fps float64,
 	width, height int,
+	q giffer.Quality,
 ) (*RenderedGif, error) {
-	videofile, err := g.Download(url)
+	videofile, err := g.Download(url, q)
 	if err != nil {
 		return nil, errors.Wrap(err, "downloading")
 	}
@@ -231,7 +235,7 @@ func (g Giffer) GififyURL(
 	r := &RenderedGif{
 		Buffer: buf,
 		// Keep the title but replace the .mp4 extension with .gif
-		FileName: strings.Split(filepath.Base(videofile), ".")[0] + ".gif",
+		FileName: sanitiseFilepath(strings.Split(filepath.Base(videofile), ".")[0] + ".gif"),
 	}
 	return r, nil
 }
@@ -260,7 +264,7 @@ func (p Proxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 // Log creates middleware that logs requests.
 // If out is nil it is assumed that no logs are desired.
 type Log struct {
-	Logger *log.Logger
+	Logger   *log.Logger
 	ShowBody bool
 }
 
@@ -289,9 +293,13 @@ func (l Log) Wrap(next http.Handler) http.Handler {
 			fmt.Fprintf(msg, "Status Code: %d\n", r.Response.StatusCode)
 		}
 		if l.ShowBody {
-			by, _ := readUntil(r.Body, 1000*64) // 64Kb
+			by, _ := readUntil(r.Body, 1000*32) // 32KB
 			if len(by) > 0 {
 				fmt.Fprintf(msg, " Body:       %s\n", string(by))
+			}
+			r.Body = ProxyCloser{
+				Reader: io.MultiReader(bytes.NewBuffer(by), r.Body),
+				Closer: r.Body,
 			}
 		}
 		fmt.Fprintf(msg, "\n")
@@ -319,4 +327,45 @@ func Wrap(h http.Handler, wrappers ...Wrapper) http.Handler {
 		h = w.Wrap(h)
 	}
 	return h
+}
+
+func sanitiseFilepath(p string) string {
+	r := strings.NewReplacer(
+		"(", "",
+		")", "",
+		"!", "",
+		"+", "",
+		"?", "",
+		"*", "",
+		"&", "",
+		"^", "",
+		"=", "",
+		" ", "",
+	)
+	return r.Replace(p)
+}
+
+// ProxyCloser decouples the reader from the closer.
+// This enables the use of io.MultiReader while closing the underlying source.
+type ProxyCloser struct {
+	io.Reader
+	io.Closer
+}
+
+
+// LogWriteHeaderErrors helps when debugging http "multiple response.WriteHeader"
+// calls.
+type LogWriteHeaderErrors struct {
+	Out io.Writer
+}
+
+func (d LogWriteHeaderErrors) Write(p []byte) (n int, err error) {
+	s := string(p)
+	if strings.Contains(s, "multiple response.WriteHeader") {
+		n, err = d.Out.Write(debug.Stack())
+		if err != nil {
+			return n, err
+		}
+	}
+	return d.Out.Write(p)
 }
