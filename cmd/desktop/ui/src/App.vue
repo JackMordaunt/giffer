@@ -114,16 +114,17 @@ export default {
                     let { file, info } = resp.data
                     let updates = new WebSocket(`ws://localhost:8081${info}`)
                     updates.onmessage = (msg) => {
-                        if (msg.error !== undefined) {
-                            this.errors.push(msg.error)
+                        this.loading = false
+                        updates.close()
+                        let data = JSON.parse(msg.data)
+                        console.log(data)
+                        if (data.error !== undefined) {
+                            this.errors.push(data.error)
                             return
                         }
                         console.log("ready to download!")
                         this.link = `http://localhost:8081${file}`
-                        updates.close()
-                        this.loading = false
                     }
-                   
                 })
                 .catch(err => {
                     console.log("catching error")
