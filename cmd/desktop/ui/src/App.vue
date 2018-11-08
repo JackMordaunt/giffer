@@ -50,12 +50,12 @@
                 </span>
             </form>
         </div>
-        <div id="img" class="row">
-            
+        <div class="row">
+            <a v-if="link.length > 0" download="memer.gif" :href="link">Download!</a>
         </div>
         <div class="row">
-            <pre v-if="errors.length > 0" class="errors">
-                {{errors}}
+            <pre v-for="(err, ii) in errors" :key="ii" class="errors">
+                {{err}}
             </pre>
         </div>
         <div class="row">
@@ -84,28 +84,48 @@ export default {
             },
             loading: false,
             errors: [],
+            link: "",
         }
     },
     methods: {
         submit() {
-            console.log("submit")
             this.loading = true
-            this.form.quality = Number(this.form.quality)
+            try {
+                this.form.start = Number(this.form.start)
+                this.form.end = Number(this.form.end)
+                this.form.width = Number(this.form.width)
+                this.form.height = Number(this.form.height)
+                this.form.fps = Number(this.form.fps)
+                this.form.quality = Number(this.form.quality)
+            } catch(e) {
+                this.errors.push("form values are not valid numbers")
+                return 
+            }
             axios.post("gifify", this.form)
                 .then(resp => {
-                    let mime = resp.headers["content-type"]
-                    console.log(mime)
-                    let decoded = btoa(resp.data)
-                    let img = new ImageData()
-                    img.src = `data:${mime};base64,${decoded}`
-                    document.getElementById("#img").appendChild(img)
+                    console.log(resp)
+                    if (resp.data.error) {
+                        this.errors.push(resp.data.error)
+                        return
+                    }
+                    console.log("waiting for download to be ready...")
+                    let { file, info } = resp.data
+                    let updates = new WebSocket(`ws://localhost:8081${info}`)
+                    updates.onmessage = (msg) => {
+                        if (msg.error !== undefined) {
+                            this.errors.push(msg.error)
+                            return
+                        }
+                        console.log("ready to download!")
+                        this.link = `http://localhost:8081${file}`
+                        updates.close()
+                        this.loading = false
+                    }
+                   
                 })
                 .catch(err => {
-                    console.log(err)
-                    this.errors.push(err)
-                })
-                .finally(() => {
-                    this.loading = false
+                    console.log("catching error")
+                    this.errors.push(err.response.data)
                 })
         }
     },
