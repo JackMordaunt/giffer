@@ -50,8 +50,9 @@
                 </span>
             </form>
         </div>
-        <div class="row">
-            <a v-if="link.length > 0" download="memer.gif" :href="link">Download!</a>
+        <div v-if="link.length > 0" class="row">
+            <!-- <a download="memer.gif" :href="link">Download!</a> -->
+            <img :src="link"/>
         </div>
         <div class="row">
             <pre v-for="(err, ii) in errors" :key="ii" class="errors">
@@ -90,6 +91,7 @@ export default {
     methods: {
         submit() {
             this.loading = true
+            // FIXME(jfm): Validate form data the Vue-idiomatic way.
             try {
                 this.form.start = Number(this.form.start)
                 this.form.end = Number(this.form.end)
