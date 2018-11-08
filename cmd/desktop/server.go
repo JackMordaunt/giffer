@@ -140,14 +140,16 @@ type Gif struct {
 // completes.
 func (g *Gif) Process(fn func() (*RenderedGif, error)) {
 	type done struct {
-		Err error `json:"error,omitempty"`
+		Err string `json:"error,omitempty"`
 	}
 	g.file, g.err = fn()
 	g.subMutex.Lock()
+	var d done
+	if g.err != nil {
+		d.Err = g.err.Error()
+	}
 	for s := range g.subs {
-		err := s.WriteJSON(done{
-			Err: g.err,
-		})
+		err := s.WriteJSON(d)
 		if err != nil {
 			s.Close()
 			delete(g.subs, s)
