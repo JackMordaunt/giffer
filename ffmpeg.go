@@ -1,8 +1,10 @@
 package giffer
 
 import (
+	"bytes"
 	"fmt"
 	"image"
+	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -35,13 +37,20 @@ func (f FFMpeg) Extract(video string, start, end, fps float64) ([]image.Image, e
 	if fps == 0 {
 		fps = 24.4
 	}
-	// ffmpeg -i file.mp4 -r 1/1 $filename%03d.jpg
 	if err := f.run(
 		"-i", cut,
 		"-vf", fmt.Sprintf("fps=%2f", fps),
 		filepath.Join(f.Dir, "frames", "$frame%03d.jpg"),
 	); err != nil {
 		return nil, errors.Wrap(err, "extracting frames")
+	}
+	dir := filepath.Join(f.Dir, "frames")
+	// Since ffmpeg doesn't always return an error we need to manually check
+	// for the expected output.
+	if _, err := os.Stat(dir); os.IsNotExist(err) {
+		return nil, fmt.Errorf("no frames found (inspect ffmpeg output)")
+	} else if err != nil {
+		return nil, errors.Wrap(err, "checking output")
 	}
 	var frames []image.Image
 	walk := func(path string, info os.FileInfo, err error) error {
@@ -51,14 +60,20 @@ func (f FFMpeg) Extract(video string, start, end, fps float64) ([]image.Image, e
 		if info.IsDir() {
 			return nil
 		}
-		frame, err := imaging.Open(path)
+		// Note: Unsure if imaging buffers the file, so we buffer it
+		// 	here. This avoids invalidating the images when LeaveMess
+		// 	is false and the files are removed.
+		img, err := ioutil.ReadFile(path)
 		if err != nil {
-			return errors.Wrap(err, "opening frame file")
+			return errors.Wrap(err, "opening frame")
+		}
+		frame, err := imaging.Decode(bytes.NewBuffer(img))
+		if err != nil {
+			return errors.Wrap(err, "decoding frame")
 		}
 		frames = append(frames, frame)
 		return nil
 	}
-	dir := filepath.Join(f.Dir, "frames")
 	if err := filepath.Walk(dir, walk); err != nil {
 		return nil, errors.Wrap(err, "walking")
 	}
@@ -68,7 +83,6 @@ func (f FFMpeg) Extract(video string, start, end, fps float64) ([]image.Image, e
 // Cut the video file from start to end (in seconds).
 // The returned string is the path to the resulting file.
 func (f FFMpeg) Cut(video string, start, end float64) (string, error) {
-	// ffmpeg -ss 00:01:00 -i video.mp4 -to 00:02:00 -c copy cut.mp4
 	if start > end {
 		return "", fmt.Errorf("start > end: %f > %f", start, end)
 	}
@@ -83,7 +97,13 @@ func (f FFMpeg) Cut(video string, start, end float64) (string, error) {
 	); err != nil {
 		return "", errors.Wrap(err, "ffmpeg")
 	}
-	return filepath.Join(f.Dir, "cut.mp4"), nil
+	cut := filepath.Join(f.Dir, "cut.mp4")
+	if _, err := os.Stat(cut); os.IsNotExist(err) {
+		return "", fmt.Errorf("cut failed: no output file detected (inspect ffmpeg output)")
+	} else if err != nil {
+		return "", errors.Wrap(err, "checking output")
+	}
+	return cut, nil
 }
 
 // IsInstalled checks whether FFMpeg is available on the system PATH.
