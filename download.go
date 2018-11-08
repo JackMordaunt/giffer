@@ -1,6 +1,11 @@
 package giffer
 
 import (
+	"github.com/OneOfOne/xxhash"
+	"io"
+	"fmt"
+	"io/ioutil"
+	"path/filepath"
 	"strings"
 	"os"
 	"github.com/jackmordaunt/video-downloader/config"
@@ -37,13 +42,55 @@ type Downloader struct {
 // Download the video from URL into Dir and return the full path to the 
 // downloaded file.
 func (dl Downloader) Download(URL string, q Quality) (string, error) {
-	if err := os.MkdirAll(dl.Dir, 0755); err != nil && err != os.ErrExist {
-		return "", errors.Wrap(err, "preparing directories")
+	h := xxhash.New64()
+	if _, err := h.WriteString(URL); err != nil {
+		return "", errors.Wrap(err, "hashing URL")
+	}
+	hash := fmt.Sprintf("%d", h.Sum64())
+	dir := filepath.Join(dl.Dir, hash)
+	// Return cached file if it exists.
+	entries, _ := ioutil.ReadDir(dir)
+	for _, entry := range entries {
+		if entry.IsDir() {
+			continue
+		}
+		if strings.HasPrefix(entry.Name(), fmt.Sprintf("%s_", q.String())) {
+			return filepath.Join(dir, entry.Name()), nil
+		}
 	}
 	// Side channel for loading config because of how the package is
 	// unfortunately structured.
-	config.OutputPath = dl.Dir
-	return Download(URL, q)
+	config.OutputPath = dir
+	// <cleaned-url>/<quality>_<cleaned-title>
+	if err := os.MkdirAll(dir, 0755); err != nil && !os.IsExist(err) {
+		return "", errors.Wrap(err, "preparing directories")
+	}
+	tmp, err := Download(URL, q)
+	if err != nil {
+		return "", err
+	}
+	real := filepath.Join(dir, fmt.Sprintf("%s_%s", q, hash+filepath.Ext(tmp)))
+	if err := os.Rename(tmp, real); err != nil {
+		return "", errors.Wrap(err, "renaming temporary file")
+	}
+	return real, nil
+}
+
+func rename(old, new string) error {
+	oldf, err := os.Open(old) 
+	if err != nil {
+		return err
+	}
+	defer oldf.Close()
+	newf, err := os.Create(new)
+	if err != nil {
+		return err
+	}
+	defer newf.Close()
+	if _, err := io.Copy(newf, oldf); err != nil {
+		return err
+	}
+	return os.Remove(old)
 }
 
 // Quality is an enum representing the various video qualities.
@@ -82,6 +129,21 @@ const (
 	// Best 1080p@60 > 720p@60 > 1080p > 720p
 	Best
 )
+
+func (q Quality) String() string {
+	switch q {
+	case Low: 
+		return "low"
+	case Medium:
+		return "medium"
+	case High: 
+		return "high"
+	case Best:
+		return "best"
+	default: 
+		return "unknown"
+	}
+}
 
 // Download a video from the specified url.
 func Download(videoURL string, quality Quality) (string, error) {
