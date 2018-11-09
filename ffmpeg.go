@@ -1,7 +1,6 @@
 package giffer
 
 import (
-	"bytes"
 	"fmt"
 	"image"
 	"io/ioutil"
@@ -95,14 +94,7 @@ func (f FFMpeg) Extract(video string, start, end, fps float64) ([]image.Image, e
 		if info.IsDir() {
 			return nil
 		}
-		// Note: Unsure if imaging buffers the file, so we buffer it
-		// 	here. This avoids invalidating the images when LeaveMess
-		// 	is false and the files are removed.
-		img, err := ioutil.ReadFile(path)
-		if err != nil {
-			return errors.Wrap(err, "opening frame")
-		}
-		frame, err := imaging.Decode(bytes.NewBuffer(img))
+		frame, err := imaging.Open(path)
 		if err != nil {
 			return errors.Wrap(err, "decoding frame")
 		}
