@@ -9,7 +9,6 @@ import (
 	"os"
 	"strings"
 	"sync"
-	"time"
 
 	"github.com/OneOfOne/xxhash"
 	"github.com/jackmordaunt/giffer"
@@ -22,9 +21,10 @@ import (
 
 // UI serves the user interface over http.
 type UI struct {
-	App    *Giffer
-	Router *mux.Router
-	Static http.Handler
+	App     *Giffer
+	Router  *mux.Router
+	Static  http.Handler
+	Verbose bool
 
 	gifmap map[string]http.Handler
 	init   sync.Once
@@ -41,11 +41,13 @@ func (ui *UI) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 func (ui *UI) routes() {
-	log := Log{
-		Logger:   log.New(LogWriteHeaderErrors{Out: os.Stdout}, "", 0),
-		ShowBody: true,
+	if ui.Verbose {
+		log := Log{
+			Logger:   log.New(LogWriteHeaderErrors{Out: os.Stdout}, "", 0),
+			ShowBody: true,
+		}
+		ui.Router.Use(log.Middleware)
 	}
-	ui.Router.Use(log.Middleware)
 	ui.Router.Handle("/gifify", ui.gifify())
 	ui.Router.Handle("/gifs/{key}", ui.gifs())
 	ui.Router.Handle("/gifs/{key}/info", ui.gifs())
@@ -86,6 +88,7 @@ func (ui *UI) gifify() http.HandlerFunc {
 				WriteBufferSize: 1024,
 			},
 		}
+		g.Init()
 		go g.Process(func() (*RenderedGif, error) {
 			return ui.App.GififyURL(
 				req.URL,
@@ -123,40 +126,46 @@ func (ui *UI) gifs() http.HandlerFunc {
 	}
 }
 
-// Gif handles the serving of a gif file.
-// There are two enpoints:
+// Gif handles the serving of a gif file and a websocket endpoint to push out
+// "gif is ready" messages.
+//
+// 3 parts:
+// 1. A closure that produces the rendered gif and an error (to decouple how we
+//	get a hold of the gif from the serving of it).
+// 2. A websocket endpoint that pushes a single message to each connection when
+// 	the gif is ready to download. If the gif is ready before the connection
+//	comes in, the connection receives the message immediately. Otherwise
+// 	the connection is stored in a map until the gif is ready.
+// 3. A static file endpoint that serves the gif image as an attachment. If the
+//	gif isn't ready to be downloaded, an appropriate message is returned.
 type Gif struct {
 	Upgrader *websocket.Upgrader
-	Tick     time.Duration
 
-	file     *RenderedGif
-	subs     map[*websocket.Conn]struct{}
-	subMutex sync.Mutex
-	err      error
-	once     sync.Once
+	file        *RenderedGif
+	subs        map[*websocket.Conn]struct{}
+	done        chan *RenderedGif
+	failed      chan error
+	connections chan *websocket.Conn
+}
+
+// Init the Gif server.
+func (g *Gif) Init() {
+	g.subs = make(map[*websocket.Conn]struct{})
+	g.done = make(chan *RenderedGif)
+	g.failed = make(chan error)
+	g.connections = make(chan *websocket.Conn)
+	go g.run()
 }
 
 // Process runs the specified function and sends a websocket message when it
 // completes.
 func (g *Gif) Process(fn func() (*RenderedGif, error)) {
-	type done struct {
-		Err string `json:"error,omitempty"`
+	img, err := fn()
+	if err != nil {
+		g.failed <- err
+	} else {
+		g.done <- img
 	}
-	g.file, g.err = fn()
-	g.subMutex.Lock()
-	var d done
-	if g.err != nil {
-		d.Err = g.err.Error()
-	}
-	for s := range g.subs {
-		err := s.WriteJSON(d)
-		if err != nil {
-			s.Close()
-			delete(g.subs, s)
-			log.Printf("writing json to websocket: %v", err)
-		}
-	}
-	g.subMutex.Unlock()
 }
 
 func (g *Gif) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -173,7 +182,7 @@ func (g *Gif) subscribe(w http.ResponseWriter, r *http.Request) {
 		log.Printf("upgrading websocket: %v", err)
 		return
 	}
-	g.append(c)
+	g.connections <- c
 }
 
 func (g *Gif) serveFile(w http.ResponseWriter, r *http.Request) {
@@ -189,11 +198,44 @@ func (g *Gif) serveFile(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (g *Gif) append(c *websocket.Conn) {
-	g.once.Do(func() {
-		g.subs = make(map[*websocket.Conn]struct{})
-	})
-	g.subMutex.Lock()
-	g.subs[c] = struct{}{}
-	g.subMutex.Unlock()
+func (g *Gif) run() {
+	type msg struct {
+		Err string `json:"error,omitempty"`
+	}
+	for {
+		select {
+		case img := <-g.done:
+			g.file = img
+			for s := range g.subs {
+				if err := s.WriteJSON(msg{}); err != nil {
+					log.Printf("writing json to websocket: %v", err)
+				}
+				if err := s.Close(); err != nil {
+					log.Printf("closing websocket: %v", err)
+				}
+				delete(g.subs, s)
+			}
+		case err := <-g.failed:
+			for s := range g.subs {
+				if err := s.WriteJSON(msg{Err: err.Error()}); err != nil {
+					log.Printf("writing json to websocket: %v", err)
+				}
+				if err := s.Close(); err != nil {
+					log.Printf("closing websocket: %v", err)
+				}
+				delete(g.subs, s)
+			}
+		case conn := <-g.connections:
+			if g.file != nil {
+				if err := conn.WriteJSON(msg{}); err != nil {
+					log.Printf("writing json to websocket: %v", err)
+				}
+				if err := conn.Close(); err != nil {
+					log.Printf("closing websocket: %v", err)
+				}
+			} else {
+				g.subs[conn] = struct{}{}
+			}
+		}
+	}
 }

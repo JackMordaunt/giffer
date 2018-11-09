@@ -20,12 +20,14 @@ import (
 var (
 	port      string
 	devServer string
+	verbose   bool
 	static    http.Handler // responsible for serving UI files.
 )
 
 func init() {
 	flag.StringVar(&port, "p", "8080", "port to serve on")
 	flag.StringVar(&devServer, "dev-proxy", "", "proxy to forward to (eg, yarn run serve)")
+	flag.BoolVar(&verbose, "v", false, "verbose mode")
 	flag.Parse()
 	if devServer != "" {
 		t, err := url.Parse(devServer)
@@ -45,12 +47,15 @@ func main() {
 				Dir: "tmp/download",
 			},
 			FFMpeg: &giffer.FFMpeg{
-				Dir:       "tmp/ffmpeg",
-				LeaveMess: true,
+				Dir: "tmp/ffmpeg",
+			},
+			Store: &gifdb{
+				Dir: "tmp/gifs",
 			},
 		},
-		Router: mux.NewRouter(),
-		Static: static,
+		Router:  mux.NewRouter(),
+		Static:  static,
+		Verbose: verbose,
 	}
 	svr := &http.Server{
 		Addr:         fmt.Sprintf(":%s", port),
