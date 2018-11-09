@@ -9,6 +9,7 @@ require (
 	github.com/gorilla/context v1.1.1 // indirect
 	github.com/gorilla/mux v1.6.2
 	github.com/gorilla/websocket v1.4.0
+	github.com/hashicorp/go-multierror v1.0.0
 	github.com/jackmordaunt/video-downloader v0.0.0-20181105210957-4fcc0a0db5fa
 	github.com/kardianos/osext v0.0.0-20170510131534-ae77be60afb1 // indirect
 	github.com/pkg/errors v0.8.0
