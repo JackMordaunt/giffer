@@ -46,8 +46,7 @@ func main() {
 		videofile = downloaded
 	}
 	ffmpeg := giffer.FFMpeg{
-		Dir:       "./tmp/ffmpeg",
-		LeaveMess: true,
+		Dir: "./tmp/ffmpeg",
 	}
 	frames, err := ffmpeg.Extract(videofile, start, end, fps)
 	if err != nil {
