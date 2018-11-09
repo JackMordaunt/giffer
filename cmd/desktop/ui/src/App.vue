@@ -1,65 +1,60 @@
 <template>
 <div id="app">
-    <div v-if="loading" class="overlay">
-        <div class="dimmer"></div>
-        <div class="center">
-            <icon name="sync" scale="2" spin></icon>
-        </div>
-    </div>
     <div class="container center">
         <div class="row">
             <h1 class="branding">Giffer</h1>
         </div>
         <div class="row">
-            <form id="#form" name="main-form" class="form" @submit.prevent="submit">
-                <span class="form-group">
+            <sui-form fluid :loading="loading" @submit.prevent="submit">
+                <sui-form-field>
                     <label>url</label>
                     <input id="url" name="url" type="url" placeholder="https://youtube.com/..." required v-model="form.url">
-                </span>
-                <span class="form-group">
+                </sui-form-field>
+                <sui-form-field>
                     <label>start</label> 
                     <input name="start" type="number" placeholder="120" min="0" required v-model="form.start">
-                </span>
-                <span class="form-group">
+                </sui-form-field>
+                <sui-form-field>
                     <label>end</label> 
                     <input name="end" type="number" placeholder="170" min="0" required v-model="form.end">
-                </span>
-                <span class="form-group">
+                </sui-form-field>
+                <sui-form-field>
                     <label>width</label> 
                     <input name="width" type="number" placeholder="400" min="0" v-model="form.width">
-                </span>
-                <span class="form-group">
+                </sui-form-field>
+                <sui-form-field>
                     <label>height</label> 
                     <input name="height" type="number" placeholder="250" min="0" v-model="form.height">
-                </span>
-                <span class="form-group">
+                </sui-form-field>
+                <sui-form-field>
                     <label>fps</label> 
                     <input name="fps" type="number" placeholder="24" min="0" v-model="form.fps">
-                </span>
-                <span class="form-group">
+                </sui-form-field>
+                <sui-form-field>
                     <label>quality</label> 
-                    <select name="quality" v-model="form.quality">
-                        <option value="0">Low</option>
-                        <option value="1">Medium</option>
-                        <option value="2">High</option>
-                        <option value="3">Best</option>
-                    </select>
-                </span>
-                <span class="form-group">
-                    <button type="submit">Submit</button>
-                </span>
-            </form>
+                    <sui-dropdown 
+                        name="quality"
+                        fluid
+                        placeholder="Select quality"
+                        selection
+                        search
+                        :options="qualities"
+                        v-model="form.quality"
+                    >
+                    </sui-dropdown>
+                </sui-form-field>
+                <sui-form-field class="form-group">
+                    <sui-button primary type="submit">Submit</sui-button>
+                </sui-form-field>
+            </sui-form>
         </div>
         <div v-if="link.length > 0" class="row">
-            <!-- <a download="memer.gif" :href="link">Download!</a> -->
-            <img :src="link"/>
+            <sui-image :src="link" size="medium" bordered />
         </div>
         <div class="row">
             <pre v-for="(err, ii) in errors" :key="ii" class="errors">
                 {{err}}
             </pre>
-        </div>
-        <div class="row">
         </div>
     </div>
 </div>
@@ -74,6 +69,12 @@ export default {
     name: "app",
     data() {
         return {
+            qualities: [
+                {key: "low", value: 0, text: "Low"},
+                {key: "medium", value: 1, text: "Medium"},
+                {key: "high", value: 2, text: "High"},
+                {key: "Best", value: 3, text: "Best"},
+            ],
             form: {
                 url: "",
                 start: 120,
@@ -165,37 +166,6 @@ body {
     justify-content: center;
 }
 
-.overlay {
-    position: absolute;
-    width: 100%;
-    height: 100%; 
-    top: 0;
-    left: 0;
-    bottom: 0;
-    right: 0;
-    display: flex;
-    z-index: 2;
-}
-
-.overlay .dimmer {
-    position: absolute;
-    top: 0;
-    left: 0;
-    bottom: 0;
-    right: 0;
-    background-color: #4e4e4e;
-    opacity: 0.7;
-    width: 100%;
-    height: 100%;
-}
-
-.overlay .loader {
-    z-index: 4;
-    margin: auto;
-    width: 100%;
-    height: 100%;
-}
-
 .row {
     width: 100%;
     display: flex;
@@ -205,22 +175,6 @@ body {
 
 .branding {
     margin: auto;
-}
-
-.form-group {
-    width: 100%;
-    display: flex;
-    flex-direction: row;
-    padding: 10px 0px 10px 0;
-}
-
-.form-group > * {
-    width: 100%;
-    margin: auto;
-}
-
-.form-group label {
-    width: 25%;
 }
 
 .errors {
