@@ -1,62 +1,68 @@
 <template>
 <div id="app">
-    <div class="container center">
-        <div class="row">
-            <h1 class="branding">Giffer</h1>
-        </div>
-        <div class="row">
-            <sui-form fluid :loading="loading" @submit.prevent="submit">
-                <sui-form-field>
-                    <label>url</label>
-                    <input id="url" name="url" type="url" placeholder="https://youtube.com/..." required v-model="form.url">
-                </sui-form-field>
-                <sui-form-field>
-                    <label>start</label> 
-                    <input name="start" type="number" placeholder="120" min="0" required v-model="form.start">
-                </sui-form-field>
-                <sui-form-field>
-                    <label>end</label> 
-                    <input name="end" type="number" placeholder="170" min="0" required v-model="form.end">
-                </sui-form-field>
-                <sui-form-field>
-                    <label>width</label> 
-                    <input name="width" type="number" placeholder="400" min="0" v-model="form.width">
-                </sui-form-field>
-                <sui-form-field>
-                    <label>height</label> 
-                    <input name="height" type="number" placeholder="250" min="0" v-model="form.height">
-                </sui-form-field>
-                <sui-form-field>
-                    <label>fps</label> 
-                    <input name="fps" type="number" placeholder="24" min="0" v-model="form.fps">
-                </sui-form-field>
-                <sui-form-field>
-                    <label>quality</label> 
-                    <sui-dropdown 
-                        name="quality"
-                        fluid
-                        placeholder="Select quality"
-                        selection
-                        search
-                        :options="qualities"
-                        v-model="form.quality"
+    <sui-grid id="my-container" middle aligned>
+        <sui-grid-row stretched>
+            <sui-grid-column>
+                <sui-segment>
+                    <h1>Giffer</h1>
+                    <sui-form
+                        id="main-form"
+                        :loading="loading"
+                        @submit.prevent="submit"
                     >
-                    </sui-dropdown>
-                </sui-form-field>
-                <sui-form-field class="form-group">
-                    <sui-button primary type="submit">Submit</sui-button>
-                </sui-form-field>
-            </sui-form>
-        </div>
-        <div v-if="link.length > 0" class="row">
+                        <sui-form-field>
+                            <label>url</label>
+                            <input id="url" name="url" type="url" placeholder="https://youtube.com/..." required v-model="form.url">
+                        </sui-form-field>
+                        <sui-form-field>
+                            <label>start</label> 
+                            <input name="start" type="number" placeholder="120" min="0" required v-model="form.start">
+                        </sui-form-field>
+                        <sui-form-field>
+                            <label>end</label> 
+                            <input name="end" type="number" placeholder="170" min="0" required v-model="form.end">
+                        </sui-form-field>
+                        <sui-form-field>
+                            <label>width</label> 
+                            <input name="width" type="number" placeholder="400" min="0" v-model="form.width">
+                        </sui-form-field>
+                        <sui-form-field>
+                            <label>height</label> 
+                            <input name="height" type="number" placeholder="250" min="0" v-model="form.height">
+                        </sui-form-field>
+                        <sui-form-field>
+                            <label>fps</label> 
+                            <input name="fps" type="number" placeholder="24" min="0" v-model="form.fps">
+                        </sui-form-field>
+                        <sui-form-field>
+                            <label>quality</label> 
+                            <sui-dropdown 
+                                name="quality"
+                                fluid
+                                placeholder="Select quality"
+                                selection
+                                search
+                                :options="qualities"
+                                v-model="form.quality"
+                            >
+                            </sui-dropdown>
+                        </sui-form-field>
+                        <sui-form-field class="form-group">
+                            <sui-button primary type="submit">Submit</sui-button>
+                        </sui-form-field>
+                    </sui-form>
+                </sui-segment>
+            </sui-grid-column>
+        </sui-grid-row>
+        <sui-grid-row v-if="link.length > 0">
             <sui-image :src="link" size="medium" bordered />
-        </div>
-        <div class="row">
+        </sui-grid-row>
+        <sui-grid-row stretched>
             <pre v-for="(err, ii) in errors" :key="ii" class="errors">
                 {{err}}
             </pre>
-        </div>
-    </div>
+        </sui-grid-row>
+    </sui-grid>
 </div>
 </template>
 
@@ -157,38 +163,23 @@ body {
     right: 0;
 }
 
-.container {
-    width: 100%;
+#my-container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
     height: 100%;
-    display: flex;
-    flex-wrap: wrap;
-    flex-direction: column;
-    justify-content: center;
-}
-
-.row {
     width: 100%;
-    display: flex;
-    justify-content: center;
-    margin: auto;
+    margin: 0;
+    padding: 10px;
 }
 
-.branding {
-    margin: auto;
+#main-form {
+    overflow-y: auto;
 }
 
 .errors {
     display: flex;
     max-height: 20vh;
     overflow: scroll;
-}
-
-.center {
-    margin: 0;
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    -ms-transform: translate(-50%, -50%);
-    transform: translate(-50%, -50%);
 }
 </style>
