@@ -41,10 +41,10 @@ type Downloader struct {
 
 // Download the video from URL into Dir and return the full path to the 
 // downloaded file.
-func (dl Downloader) Download(URL string, q Quality) (string, error) {
+func (dl Downloader) Download(URL string, start, end float64, q Quality) (string, error) {
 	h := xxhash.New64()
-	if _, err := h.WriteString(URL); err != nil {
-		return "", errors.Wrap(err, "hashing URL")
+	if _, err := h.WriteString(fmt.Sprintf("%s_%f_%f_%s", URL, start, end, q)); err != nil {
+		return "", errors.Wrap(err, "hashing inputs")
 	}
 	hash := fmt.Sprintf("%d", h.Sum64())
 	dir := filepath.Join(dl.Dir, hash)
@@ -65,7 +65,7 @@ func (dl Downloader) Download(URL string, q Quality) (string, error) {
 	if err := os.MkdirAll(dir, 0755); err != nil && !os.IsExist(err) {
 		return "", errors.Wrap(err, "preparing directories")
 	}
-	tmp, err := Download(URL, q)
+	tmp, err := Download(URL, start, end, q)
 	if err != nil {
 		return "", err
 	}
@@ -146,7 +146,7 @@ func (q Quality) String() string {
 }
 
 // Download a video from the specified url.
-func Download(videoURL string, quality Quality) (string, error) {
+func Download(videoURL string, start, end float64, quality Quality) (string, error) {
 	var (
 		domain string
 		err    error
