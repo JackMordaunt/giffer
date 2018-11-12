@@ -47,7 +47,7 @@ func main() {
 				Dir: "tmp/download",
 			},
 			FFMpeg: &giffer.FFMpeg{
-				Dir: "tmp/ffmpeg",
+				Debug: verbose,
 			},
 			Store: &gifdb{
 				Dir: "tmp/gifs",
