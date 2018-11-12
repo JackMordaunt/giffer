@@ -32,7 +32,7 @@ func main() {
 	flag.IntVar(&width, "width", 0, "width in pixels of the output frames")
 	flag.IntVar(&height, "height", 0, "height in pixels of the output frames")
 	flag.Float64Var(&fps, "fps", 24, "frames per second")
-	flag.Boolvar(&debug, "debug", false, "debug mode")
+	flag.BoolVar(&debug, "debug", false, "debug mode")
 	flag.Parse()
 	if terminal.IsTerminal(int(os.Stdin.Fd())) {
 		tmp, err := os.Create("tmp")
