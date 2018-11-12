@@ -1,15 +1,12 @@
 package main
 
 import (
-	"bytes"
 	"flag"
-	"image"
-	"image/gif"
+	"io"
 	"log"
 	"os"
-	"sync"
 
-	"github.com/disintegration/imaging"
+	"golang.org/x/crypto/ssh/terminal"
 
 	"github.com/jackmordaunt/giffer"
 )
@@ -23,6 +20,7 @@ var (
 	width     int
 	height    int
 	url       string
+	debug     bool
 )
 
 func main() {
@@ -34,8 +32,21 @@ func main() {
 	flag.IntVar(&width, "width", 0, "width in pixels of the output frames")
 	flag.IntVar(&height, "height", 0, "height in pixels of the output frames")
 	flag.Float64Var(&fps, "fps", 24, "frames per second")
+	flag.Boolvar(&debug, "debug", false, "debug mode")
 	flag.Parse()
-	if url != "" {
+	if terminal.IsTerminal(int(os.Stdin.Fd())) {
+		tmp, err := os.Create("tmp")
+		if err != nil {
+			log.Fatalf("creating temporary file: %v", err)
+		}
+		defer tmp.Close()
+		defer os.Remove("tmp")
+		if _, err := io.Copy(tmp, os.Stdin); err != nil {
+			log.Fatalf("writing temporary file: %v", err)
+		}
+		tmp.Close()
+		videofile = "tmp"
+	} else if url != "" {
 		dl := giffer.Downloader{
 			Dir: "./tmp/dl",
 		}
@@ -46,67 +57,23 @@ func main() {
 		videofile = downloaded
 	}
 	ffmpeg := giffer.FFMpeg{
-		Dir: "./tmp/ffmpeg",
+		Debug: debug,
 	}
-	frames, err := ffmpeg.Extract(videofile, start, end, fps)
+	gif, err := ffmpeg.Convert(videofile, start, end, fps, width, height, "gif", "gif")
 	if err != nil {
-		log.Fatalf("extracting frames: %v", err)
+		log.Fatalf("converting to gif: %v", err)
 	}
-	type processed struct {
-		Img   *image.Paletted
-		Index int
+	var out io.WriteCloser
+	if terminal.IsTerminal(int(os.Stdout.Fd())) {
+		out = os.Stdout
+	} else {
+		out, err = os.Open(dest)
+		if err != nil {
+			log.Fatalf("opening destination file: %v", err)
+		}
 	}
-	images := make(chan processed)
-	wg := &sync.WaitGroup{}
-	wg.Add(len(frames))
-	for ii, frame := range frames {
-		ii := ii
-		frame := frame
-		go func() {
-			defer wg.Done()
-			if width != 0 || height != 0 {
-				frame = imaging.Resize(frame, width, height, imaging.Box)
-			}
-			buf := bytes.Buffer{}
-			if err := gif.Encode(&buf, frame, nil); err != nil {
-				log.Printf("encoding gif: %v", err)
-				return
-			}
-			tmpimg, err := gif.Decode(&buf)
-			if err != nil {
-				log.Printf("decoding gif: %v", err)
-				return
-			}
-			images <- processed{
-				Img:   tmpimg.(*image.Paletted),
-				Index: ii,
-			}
-		}()
-	}
-	go func() {
-		wg.Wait()
-		close(images)
-	}()
-	paletted := make([]*image.Paletted, len(frames))
-	for frame := range images {
-		paletted[frame.Index] = frame.Img
-	}
-	delays := make([]int, len(frames))
-	delay := int(100 / fps)
-	for ii := range delays {
-		delays[ii] = delay
-	}
-	opfile, err := os.Create(dest)
-	if err != nil {
-		log.Fatalf("creating output file %s: %v", dest, err)
-	}
-	defer opfile.Close()
-	g := &gif.GIF{
-		Image:     paletted,
-		Delay:     delays,
-		LoopCount: 0,
-	}
-	if err := gif.EncodeAll(opfile, g); err != nil {
-		log.Printf("encoding animated gif: %v", err)
+	defer out.Close()
+	if _, err := io.Copy(out, gif); err != nil {
+		log.Fatalf("writing gif to file: %v", err)
 	}
 }
