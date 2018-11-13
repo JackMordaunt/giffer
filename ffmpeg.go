@@ -23,8 +23,10 @@ func (f FFMpeg) Convert(
 	width, height int,
 	encoding, format string,
 ) (*bytes.Buffer, error) {
-	var out bytes.Buffer
-	var args []string
+	var (
+		out  bytes.Buffer
+		args []string
+	)
 	args = append(args, "-i", video)
 	if width > 0 || height > 0 || fps > 0 {
 		var vfargs []string
