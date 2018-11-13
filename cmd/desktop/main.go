@@ -21,6 +21,7 @@ var (
 	port      string
 	devServer string
 	verbose   bool
+	headless  bool
 	static    http.Handler // responsible for serving UI files.
 )
 
@@ -28,6 +29,7 @@ func init() {
 	flag.StringVar(&port, "p", "8080", "port to serve on")
 	flag.StringVar(&devServer, "dev-proxy", "", "proxy to forward to (eg, yarn run serve)")
 	flag.BoolVar(&verbose, "v", false, "verbose mode")
+	flag.BoolVar(&headless, "headless", false, "headless mode; run only the server")
 	flag.Parse()
 	if devServer != "" {
 		t, err := url.Parse(devServer)
@@ -62,6 +64,12 @@ func main() {
 		Handler:      ui,
 		WriteTimeout: 15 * time.Second,
 		ReadTimeout:  15 * time.Second,
+	}
+	if headless {
+		if err := svr.ListenAndServe(); err != nil {
+			log.Fatalf("ui server: %v", err)
+		}
+		return
 	}
 	go func() {
 		if err := svr.ListenAndServe(); err != nil {
