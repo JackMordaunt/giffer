@@ -219,7 +219,10 @@ func Download(videoURL string, start, end float64, quality Quality) (string, err
 				break
 			}
 		}
-		path, err = item.Download(videoURL)
+		dl := downloader.Downloader{
+			Config: config.NewFromGlobal(),
+		}
+		path, err = dl.Download(&item, videoURL, start, end)
 		if err != nil {
 			return "", errors.Wrap(err, "downloading")
 		}

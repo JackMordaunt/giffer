@@ -50,7 +50,7 @@ func main() {
 		dl := giffer.Downloader{
 			Dir: "./tmp/dl",
 		}
-		downloaded, err := dl.Download(url, giffer.Medium)
+		downloaded, err := dl.Download(url, 0, 0, giffer.Medium)
 		if err != nil {
 			log.Fatalf("downloading: %v", err)
 		}

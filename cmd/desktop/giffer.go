@@ -67,7 +67,7 @@ func (g Giffer) make(
 	width, height int,
 	q giffer.Quality,
 ) (*RenderedGif, error) {
-	video, err := g.Download(url, q)
+	video, err := g.Download(url, start, end, q)
 	if err != nil {
 		return nil, errors.Wrap(err, "downloading")
 	}
