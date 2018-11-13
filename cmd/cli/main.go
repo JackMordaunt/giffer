@@ -59,7 +59,7 @@ func main() {
 	ffmpeg := giffer.FFMpeg{
 		Debug: debug,
 	}
-	gif, err := ffmpeg.Convert(videofile, start, end, fps, width, height, "gif", "gif")
+	gif, err := ffmpeg.Convert(videofile, fps, width, height, "gif", "gif")
 	if err != nil {
 		log.Fatalf("converting to gif: %v", err)
 	}

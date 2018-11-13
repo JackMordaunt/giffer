@@ -71,7 +71,7 @@ func (g Giffer) make(
 	if err != nil {
 		return nil, errors.Wrap(err, "downloading")
 	}
-	gif, err := g.Convert(video, start, end, fps, width, height, "gif", "gif")
+	gif, err := g.Convert(video, fps, width, height, "gif", "gif")
 	img := &RenderedGif{
 		Reader:   gif,
 		FileName: sanitiseFilepath(strings.Split(filepath.Base(video), ".")[0] + ".gif"),

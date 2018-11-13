@@ -9,7 +9,7 @@ require (
 	github.com/gorilla/mux v1.6.2
 	github.com/gorilla/websocket v1.4.0
 	github.com/hashicorp/go-multierror v1.0.0
-	github.com/jackmordaunt/video-downloader v0.0.0-20181113032415-88f45b3022a3
+	github.com/jackmordaunt/video-downloader v0.0.0-20181113035814-f0fc43af906f
 	github.com/kardianos/osext v0.0.0-20170510131534-ae77be60afb1 // indirect
 	github.com/pkg/errors v0.8.0
 	github.com/zserge/webview v0.0.0-20181018084947-f390a2df9ec5

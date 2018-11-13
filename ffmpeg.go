@@ -19,18 +19,12 @@ type FFMpeg struct {
 // If end is zero we convert from start until the end of the video.
 func (f FFMpeg) Convert(
 	video string,
-	start, end float64,
 	fps float64,
 	width, height int,
 	encoding, format string,
 ) (*bytes.Buffer, error) {
 	var out bytes.Buffer
-	args := []string{
-		"-ss", fmt.Sprintf("%4f", start),
-	}
-	if end > 0 && end-start > 0 {
-		args = append(args, "-t", fmt.Sprintf("%2f", end-start))
-	}
+	var args []string
 	args = append(args, "-i", video)
 	if width > 0 || height > 0 || fps > 0 {
 		var vfargs []string

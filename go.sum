@@ -24,8 +24,8 @@ github.com/hashicorp/errwrap v1.0.0 h1:hLrqtEDnRye3+sgx6z4qVLNuviH3MR5aQ0ykNJa/U
 github.com/hashicorp/errwrap v1.0.0/go.mod h1:YH+1FKiLXxHSkmPseP+kNlulaMuP3n2brvKWEqk/Jc4=
 github.com/hashicorp/go-multierror v1.0.0 h1:iVjPR7a6H0tWELX5NxNe7bYopibicUzc7uPribsnS6o=
 github.com/hashicorp/go-multierror v1.0.0/go.mod h1:dHtQlpGsu+cZNNAkkCN/P3hoUDHhCYQXV3UM06sGGrk=
-github.com/jackmordaunt/video-downloader v0.0.0-20181113032415-88f45b3022a3 h1:GUA1WFrAuZaFcq7S5yVNRkYgKMLBqK/t90pNZiEGLIg=
-github.com/jackmordaunt/video-downloader v0.0.0-20181113032415-88f45b3022a3/go.mod h1:0wZq7bsiv4eGa0JACeruRKck7gkYwIqJA/urPORdDh4=
+github.com/jackmordaunt/video-downloader v0.0.0-20181113035814-f0fc43af906f h1:s8lYjFD/vbFKQ6NkbDCkdTtWRb2LCNCtQXODb3EERgA=
+github.com/jackmordaunt/video-downloader v0.0.0-20181113035814-f0fc43af906f/go.mod h1:0wZq7bsiv4eGa0JACeruRKck7gkYwIqJA/urPORdDh4=
 github.com/kardianos/osext v0.0.0-20170510131534-ae77be60afb1 h1:PJPDf8OUfOK1bb/NeTKd4f1QXZItOX389VN3B6qC8ro=
 github.com/kardianos/osext v0.0.0-20170510131534-ae77be60afb1/go.mod h1:1NbS8ALrpOvjt0rHPNLyCIeMtbizbir8U//inJ+zuB8=
 github.com/kr/pretty v0.1.0 h1:L/CwN0zerZDmRFUapSPitk6f+Q3+0za1rQkzVuMiMFI=
