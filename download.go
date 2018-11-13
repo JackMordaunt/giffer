@@ -2,7 +2,6 @@ package giffer
 
 import (
 	"github.com/OneOfOne/xxhash"
-	"io"
 	"fmt"
 	"io/ioutil"
 	"path/filepath"
@@ -41,13 +40,17 @@ type Downloader struct {
 
 // Download the video from URL into Dir and return the full path to the 
 // downloaded file.
-func (dl Downloader) Download(URL string, start, end float64, q Quality) (string, error) {
-	h := xxhash.New64()
-	if _, err := h.WriteString(fmt.Sprintf("%s_%f_%f_%s", URL, start, end, q)); err != nil {
-		return "", errors.Wrap(err, "hashing inputs")
+func (dl Downloader) Download(
+	URL string,
+	start, end float64,
+	q Quality,
+) (string, error) {
+	input := fmt.Sprintf("%s_%f_%f_%s", URL, start, end, q)
+	h, err := hash(input)
+	if err != nil {
+		return "", errors.Wrap(err, "creating hash")
 	}
-	hash := fmt.Sprintf("%d", h.Sum64())
-	dir := filepath.Join(dl.Dir, hash)
+	dir := filepath.Join(dl.Dir, h)
 	// Return cached file if it exists.
 	entries, _ := ioutil.ReadDir(dir)
 	for _, entry := range entries {
@@ -69,28 +72,11 @@ func (dl Downloader) Download(URL string, start, end float64, q Quality) (string
 	if err != nil {
 		return "", err
 	}
-	real := filepath.Join(dir, fmt.Sprintf("%s_%s", q, hash+filepath.Ext(tmp)))
+	real := filepath.Join(dir, fmt.Sprintf("%s_%s", q, h+filepath.Ext(tmp)))
 	if err := os.Rename(tmp, real); err != nil {
 		return "", errors.Wrap(err, "renaming temporary file")
 	}
 	return real, nil
-}
-
-func rename(old, new string) error {
-	oldf, err := os.Open(old) 
-	if err != nil {
-		return err
-	}
-	defer oldf.Close()
-	newf, err := os.Create(new)
-	if err != nil {
-		return err
-	}
-	defer newf.Close()
-	if _, err := io.Copy(newf, oldf); err != nil {
-		return err
-	}
-	return os.Remove(old)
 }
 
 // Quality is an enum representing the various video qualities.
@@ -146,7 +132,11 @@ func (q Quality) String() string {
 }
 
 // Download a video from the specified url.
-func Download(videoURL string, start, end float64, quality Quality) (string, error) {
+func Download(
+	videoURL string,
+	start, end float64,
+	quality Quality,
+) (string, error) {
 	var (
 		domain string
 		err    error
@@ -228,4 +218,12 @@ func Download(videoURL string, start, end float64, quality Quality) (string, err
 		}
 	}
 	return path, nil
+}
+
+func hash(input string) (string, error) {
+	h := xxhash.New64()
+	if _, err := h.WriteString(input); err != nil {
+		return "", errors.Wrap(err, "writing to hash object")
+	}
+	return fmt.Sprintf("%d", h.Sum64()), nil
 }
