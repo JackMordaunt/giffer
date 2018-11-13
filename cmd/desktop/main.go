@@ -77,7 +77,7 @@ func main() {
 		}
 	}()
 	view := webview.New(webview.Settings{
-		Title:     "WebGen",
+		Title:     "Giffer",
 		URL:       fmt.Sprintf("http://localhost:%s", port),
 		Width:     800,
 		Height:    600,
