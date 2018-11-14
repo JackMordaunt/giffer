@@ -20,27 +20,13 @@
                             <sui-form-fields unstackable>
                                 <sui-form-field>
                                     <label>start</label> 
-                                    <input name="start" type="number" placeholder="120" min="0" required v-model="form.start">
+                                    <input type="number" name="start"  :min="0" required v-model="form.start" />
                                 </sui-form-field>
                                 <sui-form-field>
                                     <label>end</label> 
-                                    <input name="end" type="number" placeholder="170" min="0" required v-model="form.end">
+                                    <input type="number" name="end"  :min="0" required v-model="form.end" />
                                 </sui-form-field>
                             </sui-form-fields>
-                            <sui-form-fields unstackable>
-                                <sui-form-field>
-                                    <label>width</label> 
-                                    <input name="width" type="number" placeholder="400" min="0" v-model="form.width">
-                                </sui-form-field>
-                                <sui-form-field>
-                                    <label>height</label> 
-                                    <input name="height" type="number" placeholder="250" min="0" v-model="form.height">
-                                </sui-form-field>
-                            </sui-form-fields>
-                            <sui-form-field>
-                                <label>fps</label> 
-                                <input name="fps" type="number" placeholder="24" min="0" v-model="form.fps">
-                            </sui-form-field>
                             <sui-form-field>
                                 <label>quality</label> 
                                 <sui-dropdown 
@@ -53,6 +39,20 @@
                                     v-model="form.quality"
                                 >
                                 </sui-dropdown>
+                            </sui-form-field>
+                            <sui-form-fields unstackable>
+                                <sui-form-field>
+                                    <label>width</label> 
+                                    <input type="number" name="width" :min="0" v-model="form.width" />
+                                </sui-form-field>
+                                <sui-form-field>
+                                    <label>height</label> 
+                                    <input type="number" name="height" :min="0" v-model="form.height" />
+                                </sui-form-field>
+                            </sui-form-fields>
+                            <sui-form-field>
+                                <label>fps</label> 
+                                <input type="number" name="fps" :min="0" v-model="form.fps" />
                             </sui-form-field>
                             <sui-form-field>
                                 <sui-button
@@ -106,23 +106,16 @@ export default {
             ],
             form: {
                 url: "",
-                start: 120,
-                end: 130,
+                start: 0,
+                end: 10,
+                fps: 15,
                 width: 350,
                 height: 0,
-                fps: 24,
                 quality: 0,
             },
             loading: false,
             messages: {
-                active: [
-                    {
-                        name: "Test Error",
-                        description: "This is an error.",
-                        isError: true,
-                        id: 0,
-                    }
-                ],
+                active: [],
                 id: 0,
             },
             link: "",
@@ -142,7 +135,7 @@ export default {
             } catch(e) {
                 this.pushMessage({
                     name: "Form Validation",
-                    description: "form values are not valid numbers",
+                    description: "Some form values are not valid numbers.",
                     isError: true,
                 })
                 return 
