@@ -20,11 +20,11 @@
                             <sui-form-fields unstackable>
                                 <sui-form-field>
                                     <label>start</label> 
-                                    <input type="number" name="start"  :min="0" required v-model="form.start" />
+                                    <input type="number" step="0.1" name="start"  :min="0" required v-model="form.start" />
                                 </sui-form-field>
                                 <sui-form-field>
                                     <label>end</label> 
-                                    <input type="number" name="end"  :min="0" required v-model="form.end" />
+                                    <input type="number" step="0.1" name="end"  :min="0" required v-model="form.end" />
                                 </sui-form-field>
                             </sui-form-fields>
                             <sui-form-field>
@@ -43,16 +43,16 @@
                             <sui-form-fields unstackable>
                                 <sui-form-field>
                                     <label>width</label> 
-                                    <input type="number" name="width" :min="0" v-model="form.width" />
+                                    <input type="number" step="0.1" name="width" :min="0" v-model="form.width" />
                                 </sui-form-field>
                                 <sui-form-field>
                                     <label>height</label> 
-                                    <input type="number" name="height" :min="0" v-model="form.height" />
+                                    <input type="number" step="0.1" name="height" :min="0" v-model="form.height" />
                                 </sui-form-field>
                             </sui-form-fields>
                             <sui-form-field>
                                 <label>fps</label> 
-                                <input type="number" name="fps" :min="0" v-model="form.fps" />
+                                <input type="number" step="0.1" name="fps" :min="0" v-model="form.fps" />
                             </sui-form-field>
                             <sui-form-field>
                                 <sui-button
@@ -81,7 +81,7 @@
             <div v-for="(msg, ii) in messages.active" :key="msg.id" class="row">
                 <sui-message :error="msg.isError" dismissable @dismiss="deleteMessage(ii)">
                     <sui-message-header>{{msg.name}}</sui-message-header>
-                    <pre>{{msg.description}}</pre>
+                    <pre class="message-content">{{msg.description}}</pre>
                 </sui-message>
             </div>
         </div>
@@ -125,21 +125,18 @@ export default {
         submit() {
             this.loading = true
             // FIXME(jfm): Validate form data the Vue-idiomatic way.
-            try {
-                this.form.start = Number(this.form.start)
-                this.form.end = Number(this.form.end)
-                this.form.width = Number(this.form.width)
-                this.form.height = Number(this.form.height)
-                this.form.fps = Number(this.form.fps)
-                this.form.quality = Number(this.form.quality)
-            } catch(e) {
-                this.pushMessage({
-                    name: "Form Validation",
-                    description: "Some form values are not valid numbers.",
-                    isError: true,
-                })
-                return 
-            }
+            this.form.keys().forEach(v => {
+                try {
+                    this.$set(this.form, v, Number(this.form[v]))
+                } catch(err) {
+                    this.$set(this.form, v, 0)
+                    this.pushMessage({
+                        name: "Form Validation",
+                        description: `${v} should be a number, got ${typeof this.form[v]}`,
+                        isError: true,
+                    })
+                }
+            })
             axios.post("gifify", this.form)
                 .then(resp => {
                     // console.log(resp)
@@ -161,7 +158,7 @@ export default {
                         // console.log(data)
                         if (data.error !== undefined) {
                             this.pushMessage({
-                                name: "Websocket Error",
+                                name: "Making Gif",
                                 description: data.error,
                                 isError: true,
                             })
@@ -175,7 +172,7 @@ export default {
                     // console.log("catching error")
                     // console.log(err.response.data)
                     this.pushMessage({
-                        name: "API Error",
+                        name: "Calling API",
                         description: err.response.data,
                         isError: true,
                     })
@@ -305,5 +302,11 @@ body {
     right: 25%;
     left: 25%;
     z-index: 201;
+}
+
+.message-content {
+    overflow: auto;
+    white-space: pre-wrap;
+    max-height: 100px;
 }
 </style>
