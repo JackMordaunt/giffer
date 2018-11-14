@@ -15,7 +15,7 @@
                         >
                             <sui-form-field>
                                 <label>url</label>
-                                <input id="url" name="url" type="url" placeholder="https://youtube.com/..." required v-model="form.url">
+                                <input id="url" name="url" type="url" placeholder="https://youtube.com/watch..." required v-model="form.url">
                             </sui-form-field>
                             <sui-form-fields unstackable>
                                 <sui-form-field>
