@@ -1,6 +1,6 @@
 <template>
 <div id="app" :class="mode">
-    <div class="header top-level">
+    <div id="header" class="top-level">
         <h1>Giffer</h1>
     </div>
     <div class="flex-grid">
@@ -77,16 +77,14 @@
                 </div>
             </div>
         </div>
-        <!-- <div class="col">
-            <div class="flex-container">
-                <div v-for="(err, ii) in errors" :key="ii" class="row">
-                    <sui-message error class="flex-item">
-                        <sui-message-header>Error</sui-message-header>
-                        <pre>{{err}}</pre>
-                    </sui-message>
-                </div>
+        <div class="snackbar" v-if="messages.active.length > 0">
+            <div v-for="(msg, ii) in messages.active" :key="msg.id" class="row">
+                <sui-message :error="msg.isError" dismissable @dismiss="deleteMessage(ii)">
+                    <sui-message-header>{{msg.name}}</sui-message-header>
+                    <pre>{{msg.description}}</pre>
+                </sui-message>
             </div>
-        </div> -->
+        </div>
     </div>
 </div>
 </template>
@@ -116,7 +114,17 @@ export default {
                 quality: 0,
             },
             loading: false,
-            errors: [],
+            messages: {
+                active: [
+                    {
+                        name: "Test Error",
+                        description: "This is an error.",
+                        isError: true,
+                        id: 0,
+                    }
+                ],
+                id: 0,
+            },
             link: "",
         }
     },
@@ -132,14 +140,22 @@ export default {
                 this.form.fps = Number(this.form.fps)
                 this.form.quality = Number(this.form.quality)
             } catch(e) {
-                this.errors.push("form values are not valid numbers")
+                this.pushMessage({
+                    name: "Form Validation",
+                    description: "form values are not valid numbers",
+                    isError: true,
+                })
                 return 
             }
             axios.post("gifify", this.form)
                 .then(resp => {
                     // console.log(resp)
                     if (resp.data.error) {
-                        this.errors.push(resp.data.error)
+                        this.pushMessage({
+                            name: "Application Error",
+                            description: resp.data.error,
+                            isError: true,
+                        })
                         return
                     }
                     // console.log("waiting for download to be ready...")
@@ -151,7 +167,11 @@ export default {
                         let data = JSON.parse(msg.data)
                         // console.log(data)
                         if (data.error !== undefined) {
-                            this.errors.push(data.error)
+                            this.pushMessage({
+                                name: "Websocket Error",
+                                description: data.error,
+                                isError: true,
+                            })
                             return
                         }
                         // console.log("ready to download!")
@@ -161,8 +181,19 @@ export default {
                 .catch(err => {
                     // console.log("catching error")
                     // console.log(err.response.data)
-                    this.errors.push(err.response.data)
+                    this.pushMessage({
+                        name: "API Error",
+                        description: err.response.data,
+                        isError: true,
+                    })
                 })
+        },
+        deleteMessage(ii) {
+            this.messages.active.splice(ii, 1)
+        },
+        pushMessage(msg) {
+            msg.id = this.messages.id++
+            this.messages.active.push(msg)
         }
     },
     computed: {
@@ -209,12 +240,12 @@ body {
     margin-bottom: 20px;
 }
 
-.header {
+#header {
     background-color: black;
     color: white;
 }
 
-.header > * {
+#header > * {
     margin: 0 20px;
 }
 
@@ -250,7 +281,7 @@ body {
     overflow-y: auto;
 }
 
-.top-level.header {
+.top-level#header {
     height: 35px;
     overflow: hidden;
 }
@@ -264,13 +295,22 @@ body {
         padding-top: 35px;
         height: 100%;
     }
-    .top-level.header {
+    .top-level#header {
         padding-top: 0;
         top: 0;
         position: fixed;
         height: 35px;
         width: 100vw;
-        z-index: 2;
+        z-index: 200;
     }
+}
+
+.snackbar {
+    position: absolute;
+    bottom: 35px;
+    margin: auto;
+    right: 25%;
+    left: 25%;
+    z-index: 201;
 }
 </style>
