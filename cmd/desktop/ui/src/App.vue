@@ -8,7 +8,6 @@
             <div class="flex-container">
                 <div class="row">
                     <div class="flex-item">
-
                         <sui-form 
                             id="input-form"
                             :loading="loading"
