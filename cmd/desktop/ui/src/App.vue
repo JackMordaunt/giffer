@@ -3,77 +3,91 @@
     <div class="header top-level">
         <h1>Giffer</h1>
     </div>
-    <div class="container top-level">
-        <div class="flex-grid">
-            <div class="col">
-                <sui-form 
-                    id="input-form"
-                    class="top-level"
-                    :loading="loading"
-                    @submit.prevent="submit"
-                >
-                    <sui-form-field>
-                        <label>url</label>
-                        <input id="url" name="url" type="url" placeholder="https://youtube.com/..." required v-model="form.url">
-                    </sui-form-field>
-                    <sui-form-field>
-                        <label>start</label> 
-                        <input name="start" type="number" placeholder="120" min="0" required v-model="form.start">
-                    </sui-form-field>
-                    <sui-form-field>
-                        <label>end</label> 
-                        <input name="end" type="number" placeholder="170" min="0" required v-model="form.end">
-                    </sui-form-field>
-                    <sui-form-field>
-                        <label>width</label> 
-                        <input name="width" type="number" placeholder="400" min="0" v-model="form.width">
-                    </sui-form-field>
-                    <sui-form-field>
-                        <label>height</label> 
-                        <input name="height" type="number" placeholder="250" min="0" v-model="form.height">
-                    </sui-form-field>
-                    <sui-form-field>
-                        <label>fps</label> 
-                        <input name="fps" type="number" placeholder="24" min="0" v-model="form.fps">
-                    </sui-form-field>
-                    <sui-form-field>
-                        <label>quality</label> 
-                        <sui-dropdown 
-                            name="quality"
-                            fluid
-                            placeholder="Select quality"
-                            selection
-                            search
-                            :options="qualities"
-                            v-model="form.quality"
+    <div class="flex-grid">
+        <div class="col top-level">
+            <div class="flex-container">
+                <div class="row">
+                    <div class="flex-item">
+
+                        <sui-form 
+                            id="input-form"
+                            :loading="loading"
+                            @submit.prevent="submit"
                         >
-                        </sui-dropdown>
-                    </sui-form-field>
-                    <sui-form-field>
-                        <sui-button
-                            id="input-form-button"
-                            primary
-                            type="submit"
-                        >
-                            Create
-                        </sui-button>
-                    </sui-form-field>
-                </sui-form>
-            </div>
-            <div class="col">
-                <div v-if="link.length > 0">
-                    <sui-image :src="link" size="medium" bordered />
+                            <sui-form-field>
+                                <label>url</label>
+                                <input id="url" name="url" type="url" placeholder="https://youtube.com/..." required v-model="form.url">
+                            </sui-form-field>
+                            <sui-form-fields unstackable>
+                                <sui-form-field>
+                                    <label>start</label> 
+                                    <input name="start" type="number" placeholder="120" min="0" required v-model="form.start">
+                                </sui-form-field>
+                                <sui-form-field>
+                                    <label>end</label> 
+                                    <input name="end" type="number" placeholder="170" min="0" required v-model="form.end">
+                                </sui-form-field>
+                            </sui-form-fields>
+                            <sui-form-fields unstackable>
+                                <sui-form-field>
+                                    <label>width</label> 
+                                    <input name="width" type="number" placeholder="400" min="0" v-model="form.width">
+                                </sui-form-field>
+                                <sui-form-field>
+                                    <label>height</label> 
+                                    <input name="height" type="number" placeholder="250" min="0" v-model="form.height">
+                                </sui-form-field>
+                            </sui-form-fields>
+                            <sui-form-field>
+                                <label>fps</label> 
+                                <input name="fps" type="number" placeholder="24" min="0" v-model="form.fps">
+                            </sui-form-field>
+                            <sui-form-field>
+                                <label>quality</label> 
+                                <sui-dropdown 
+                                    name="quality"
+                                    fluid
+                                    placeholder="Select quality"
+                                    selection
+                                    search
+                                    :options="qualities"
+                                    v-model="form.quality"
+                                >
+                                </sui-dropdown>
+                            </sui-form-field>
+                            <sui-form-field>
+                                <sui-button
+                                    id="input-form-button"
+                                    primary
+                                    type="submit"
+                                >
+                                    Create
+                                </sui-button>
+                            </sui-form-field>
+                        </sui-form>
+                    </div>
                 </div>
             </div>
-            <div class="col">
-                <div v-for="(err, ii) in errors" :key="ii">
-                    <sui-message error>
+        </div>
+        <div class="col">
+            <div class="flex-container">
+                <div v-if="link.length > 0" class="row">
+                    <div class="flex-item">
+                        <sui-image :src="link" bordered/>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- <div class="col">
+            <div class="flex-container">
+                <div v-for="(err, ii) in errors" :key="ii" class="row">
+                    <sui-message error class="flex-item">
                         <sui-message-header>Error</sui-message-header>
                         <pre>{{err}}</pre>
                     </sui-message>
                 </div>
             </div>
-        </div>
+        </div> -->
     </div>
 </div>
 </template>
@@ -178,13 +192,47 @@ body {
 }
 
 #input-form {
-    /* height: calc(100vh - 35px);
-    overflow-y: auto; */
-    padding: 20px 20px 0 20px;
+    margin: 20px 20px 0 20px;
+    text-align: left;
+}
+
+#input-form .inline.fields {
+    padding: 0;
+    display: flex;
+}
+
+#input-form .inline.fields .field {
+    padding: 0;
+    flex: 1;
 }
 
 #input-form-button {
     margin-bottom: 20px;
+}
+
+.header {
+    background-color: black;
+    color: white;
+}
+
+.header > * {
+    margin: 0 20px;
+}
+
+.flex-container {
+    height: 100%;
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.row {
+    width: auto;
+}
+
+.flex-item {
+    text-align: center;
 }
 
 .flex-grid {
@@ -193,15 +241,6 @@ body {
 
 .col {
     flex: 1
-}
-
-.flex-grid-thirds {
-  display: flex;
-  justify-content: space-between;
-}
-
-.flex-grid-thirds .col {
-  width: 32%;
 }
 
 /*  top-level specifies that the element's height is derived from the window
@@ -220,6 +259,19 @@ body {
 @media (max-width: 400px) {
     .flex-grid {
         display: block;
+    }
+    .top-level {
+        display: block;
+        padding-top: 35px;
+        height: 100%;
+    }
+    .top-level.header {
+        padding-top: 0;
+        top: 0;
+        position: fixed;
+        height: 35px;
+        width: 100vw;
+        z-index: 2;
     }
 }
 </style>
