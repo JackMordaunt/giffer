@@ -124,17 +124,18 @@ export default {
     methods: {
         submit() {
             this.loading = true
-            // FIXME(jfm): Validate form data the Vue-idiomatic way.
-            this.form.keys().forEach(v => {
-                try {
-                    this.$set(this.form, v, Number(this.form[v]))
-                } catch(err) {
-                    this.$set(this.form, v, 0)
+            let numbers = ["start", "end", "fps", "width", "height", "quality"]
+            numbers.forEach(v => {
+                let n = Number(this.form[v])
+                if (n === NaN) {
                     this.pushMessage({
                         name: "Form Validation",
                         description: `${v} should be a number, got ${typeof this.form[v]}`,
                         isError: true,
                     })
+                    this.$set(this.form, v, 0)
+                } else {
+                    this.$set(this.form, v, n)
                 }
             })
             axios.post("gifify", this.form)
