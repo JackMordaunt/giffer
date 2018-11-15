@@ -150,7 +150,8 @@ export default {
                     }
                     // console.log("waiting for download to be ready...")
                     let { file, info } = resp.data
-                    let updates = new WebSocket(`ws://localhost:8081${info}`)
+                    let updates = new WebSocket(((window.location.protocol === "https:") ? "wss://" : "ws://") + window.location.host + info)
+
                     updates.onmessage = (msg) => {
                         this.loading = false
                         updates.close()
@@ -165,7 +166,7 @@ export default {
                             return
                         }
                         // console.log("ready to download!")
-                        this.link = `http://localhost:8081${file}`
+                        this.link = `${file}`
                     }
                 })
                 .catch(err => {
