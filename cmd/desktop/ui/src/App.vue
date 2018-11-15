@@ -185,6 +185,9 @@ export default {
         pushMessage(msg) {
             msg.id = this.messages.id++
             this.messages.active.push(msg)
+            if (msg.isErr) {
+                throw msg
+            }
         }
     },
     computed: {
