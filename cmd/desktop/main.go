@@ -1,6 +1,11 @@
 package main
 
 import (
+	"context"
+	"syscall"
+	"os/signal"
+	"os"
+	"github.com/zserge/lorca"
 	"flag"
 	"fmt"
 	"log"
@@ -25,6 +30,7 @@ var (
 	verbose   bool
 	headless  bool
 	browser   bool
+	chrome bool 
 	static    http.Handler // responsible for serving UI files.
 )
 
@@ -35,6 +41,7 @@ func init() {
 	flag.BoolVar(&verbose, "v", false, "verbose mode")
 	flag.BoolVar(&headless, "headless", false, "headless mode; run only the server")
 	flag.BoolVar(&browser, "browser", false, "open in default browser instead of webview; overriden by [headless]")
+	flag.BoolVar(&chrome, "chrome", false, "use chrome to render the UI instead of the native webview")
 	flag.Parse()
 	if devServer != "" {
 		t, err := url.Parse(devServer)
@@ -93,8 +100,20 @@ func main() {
 				log.Printf("restarting browser")
 			},
 		}
-		if err := b.Open(url); err != nil {
+		if err := b.Run(url); err != nil {
 			log.Fatalf("opening browser: %v", err)
+		}
+	} else if chrome {
+		b, err := lorca.New(url, "", 800, 600)
+		if err != nil {
+			log.Fatalf("opening chrome: %v", err)
+		}
+		defer b.Close()
+		sigc := make(chan os.Signal)
+		signal.Notify(sigc, os.Interrupt, syscall.SIGTERM)
+		select {
+		case <-sigc:
+		case <-b.Done():
 		}
 	} else {
 		view := webview.New(webview.Settings{
@@ -106,5 +125,8 @@ func main() {
 			Debug:     true,
 		})
 		view.Run()
+	}
+	if err := svr.Shutdown(context.Background()); err != nil {
+		log.Printf("shutting down server: %v", err)
 	}
 }
