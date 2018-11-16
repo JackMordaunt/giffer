@@ -208,12 +208,12 @@ export default {
     outline: 0.5px dotted black;
 }
 
-body {
+html, body {
     height: 100vh;
-}
-
-#app {
-    height: 100vh;
+    width: 100vw;
+    overflow: hidden;
+    padding: 0;
+    margin: 0;
 }
 
 #input-form {
