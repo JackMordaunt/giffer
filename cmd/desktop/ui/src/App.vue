@@ -127,7 +127,7 @@ export default {
             let numbers = ["start", "end", "fps", "width", "height", "quality"]
             numbers.forEach(v => {
                 let n = Number(this.form[v])
-                if (n === NaN) {
+                if (isNaN(n)) {
                     this.pushMessage({
                         name: "Form Validation",
                         description: `${v} should be a number, got ${typeof this.form[v]}`,
