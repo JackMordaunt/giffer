@@ -17,10 +17,11 @@ type Browser struct {
 	failed    chan error
 }
 
-// Open a browser window, re-opening it when closed if Loop is true.
+// Run a browser window, re-opening it when closed if Loop is true.
 // Note: open simply uses OS default application, which may not actually be a
 // web browser.
-func (b *Browser) Open(u string) error {
+// Run blocks.
+func (b *Browser) Run(u string) error {
 	cmd := b.open(u)
 	if cmd == nil {
 		return fmt.Errorf("not implemented on this OS")
@@ -33,28 +34,26 @@ func (b *Browser) Open(u string) error {
 		b.OnRestart = func() {}
 	}
 	go func() {
-		for {
-			cmd := b.open(u)
-			if err := func() error {
-				if out, err := cmd.CombinedOutput(); err != nil {
-					return errors.Wrap(err, string(out))
-				}
-				return nil
-			}(); err != nil {
-				b.failed <- err
-			}
-			if !b.Loop {
-				break
-			}
-			time.Sleep(time.Millisecond * 200)
-			b.OnRestart()
-		}
-	}()
-	go func() {
 		for err := range b.failed {
 			b.OnErr(err)
 		}
 	}()
+	for {
+		cmd := b.open(u)
+		if err := func() error {
+			if out, err := cmd.CombinedOutput(); err != nil {
+				return errors.Wrap(err, string(out))
+			}
+			return nil
+		}(); err != nil {
+			b.failed <- err
+		}
+		if !b.Loop {
+			break
+		}
+		time.Sleep(time.Millisecond * 200)
+		b.OnRestart()
+	}
 	return nil
 }
 
