@@ -1,6 +1,7 @@
 package main
 
 import (
+	"strings"
 	"context"
 	"syscall"
 	"os/signal"
@@ -44,9 +45,16 @@ func init() {
 	flag.BoolVar(&chrome, "chrome", false, "use chrome to render the UI instead of the native webview")
 	flag.Parse()
 	if devServer != "" {
+		original := devServer
+		if devServer[0] == ':' {
+			devServer = fmt.Sprintf("127.0.0.1:%s", devServer[1:])
+		} 
+		if !strings.HasPrefix(devServer, "http://") {
+			devServer = fmt.Sprintf("http://%s", devServer)
+		}
 		t, err := url.Parse(devServer)
 		if err != nil {
-			log.Fatalf("proxy: %s: not a valid URL", devServer)
+			log.Fatalf("proxy: %s: not a valid URL", original)
 		}
 		static = &Proxy{Target: t}
 	} else {
