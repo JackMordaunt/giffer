@@ -1,17 +1,13 @@
 package main
 
 import (
-	"strings"
 	"context"
-	"syscall"
-	"os/signal"
-	"os"
-	"github.com/zserge/lorca"
 	"flag"
 	"fmt"
 	"log"
 	"net/http"
 	"net/url"
+	"strings"
 	"sync"
 	"time"
 
@@ -20,8 +16,6 @@ import (
 	"github.com/GeertJohan/go.rice"
 
 	"github.com/gorilla/mux"
-
-	"github.com/zserge/webview"
 )
 
 var (
@@ -30,8 +24,6 @@ var (
 	devServer string
 	verbose   bool
 	headless  bool
-	browser   bool
-	chrome bool 
 	static    http.Handler // responsible for serving UI files.
 )
 
@@ -41,14 +33,12 @@ func init() {
 	flag.StringVar(&devServer, "dev-proxy", "", "proxy to forward to (eg, yarn run serve)")
 	flag.BoolVar(&verbose, "v", false, "verbose mode")
 	flag.BoolVar(&headless, "headless", false, "headless mode; run only the server")
-	flag.BoolVar(&browser, "browser", false, "open in default browser instead of webview; overriden by [headless]")
-	flag.BoolVar(&chrome, "chrome", false, "use chrome to render the UI instead of the native webview")
 	flag.Parse()
 	if devServer != "" {
 		original := devServer
 		if devServer[0] == ':' {
 			devServer = fmt.Sprintf("127.0.0.1:%s", devServer[1:])
-		} 
+		}
 		if !strings.HasPrefix(devServer, "http://") {
 			devServer = fmt.Sprintf("http://%s", devServer)
 		}
@@ -98,41 +88,8 @@ func main() {
 		return
 	}
 	url := fmt.Sprintf("http://%s:%s", host, port)
-	if browser {
-		b := &Browser{
-			OnErr: func(err error) {
-				log.Printf("browser: %v", err)
-			},
-			Loop: true,
-			OnRestart: func() {
-				log.Printf("restarting browser")
-			},
-		}
-		if err := b.Run(url); err != nil {
-			log.Fatalf("opening browser: %v", err)
-		}
-	} else if chrome {
-		b, err := lorca.New(url, "", 800, 600)
-		if err != nil {
-			log.Fatalf("opening chrome: %v", err)
-		}
-		defer b.Close()
-		sigc := make(chan os.Signal)
-		signal.Notify(sigc, os.Interrupt, syscall.SIGTERM)
-		select {
-		case <-sigc:
-		case <-b.Done():
-		}
-	} else {
-		view := webview.New(webview.Settings{
-			Title:     "Giffer",
-			URL:       url,
-			Width:     800,
-			Height:    600,
-			Resizable: true,
-			Debug:     true,
-		})
-		view.Run()
+	if err := Webview(url, "Giffer", 800, 600); err != nil {
+		log.Printf("webview: %v", err)
 	}
 	if err := svr.Shutdown(context.Background()); err != nil {
 		log.Printf("shutting down server: %v", err)
