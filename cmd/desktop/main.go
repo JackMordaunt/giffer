@@ -7,11 +7,14 @@ import (
 	"log"
 	"net/http"
 	"net/url"
+	"os"
+	"path/filepath"
 	"strings"
 	"sync"
 	"time"
 
 	"github.com/jackmordaunt/giffer"
+	"github.com/pkg/errors"
 
 	"github.com/GeertJohan/go.rice"
 
@@ -25,6 +28,8 @@ var (
 	verbose   bool
 	headless  bool
 	ffmpeg    string
+	logfile   string
+	logf      *os.File
 	static    http.Handler // responsible for serving UI files.
 )
 
@@ -35,7 +40,18 @@ func init() {
 	flag.BoolVar(&verbose, "v", false, "verbose mode")
 	flag.BoolVar(&headless, "headless", false, "headless mode; run only the server")
 	flag.StringVar(&ffmpeg, "ffmpeg", "", "custom path to ffmpeg binary")
+	flag.StringVar(&logfile, "log", "", "path to log file to capture stdout")
 	flag.Parse()
+	if logfile != "" {
+		var err error
+		logf, err = os.OpenFile(logfile, os.O_CREATE|os.O_RDWR, 0644)
+		if err != nil {
+			panic(errors.Wrap(err, "opening log file"))
+		}
+	} else {
+		logf = os.Stdout
+	}
+	log.SetOutput(logf)
 	if devServer != "" {
 		original := devServer
 		if devServer[0] == ':' {
@@ -58,19 +74,22 @@ func main() {
 	ui := &UI{
 		App: &Giffer{
 			Downloader: &giffer.Downloader{
-				Dir: "Giffer.app/Contents/Resources/tmp/download",
+				Dir:    filepath.Join(filepath.Dir(ffmpeg), "tmp/downloads"),
+				FFmpeg: ffmpeg,
+				Out:    logf,
 			},
 			FFMpeg: &giffer.FFMpeg{
 				Debug: verbose,
-				Use:   "Giffer.app/Contents/Resources/ffmpeg",
+				Use:   ffmpeg,
 			},
 			Store: &gifdb{
-				Dir: "Giffer.app/Contents/Resources/tmp/gifs",
+				Dir: filepath.Join(filepath.Dir(ffmpeg), "tmp/gifs"),
 			},
 		},
 		Router:  mux.NewRouter(),
 		Static:  static,
 		Verbose: verbose,
+		Out:     logf,
 	}
 	svr := &http.Server{
 		Addr:         fmt.Sprintf("%s:%s", host, port),
