@@ -1,6 +1,7 @@
 package giffer
 
 import (
+	"io"
 	"github.com/OneOfOne/xxhash"
 	"fmt"
 	"io/ioutil"
@@ -37,6 +38,7 @@ import (
 type Downloader struct {
 	Dir string
 	FFmpeg string
+	Out io.Writer
 }
 
 // Download the video from URL into Dir and return the full path to the 
@@ -46,13 +48,17 @@ func (dl Downloader) Download(
 	start, end float64,
 	q Quality,
 ) (string, error) {
-	
+	config.FFmpeg = dl.FFmpeg
+	fmt.Fprintf(dl.Out, "ffmpeg: %q\n", dl.FFmpeg)	
 	input := fmt.Sprintf("%s_%f_%f_%s", URL, start, end, q)
 	h, err := hash(input)
 	if err != nil {
 		return "", errors.Wrap(err, "creating hash")
 	}
 	dir := filepath.Join(dl.Dir, h)
+	// Side channel for loading config because of how the package is
+	// unfortunately structured.
+	config.OutputPath = dir
 	// Return cached file if it exists.
 	entries, _ := ioutil.ReadDir(dir)
 	for _, entry := range entries {
@@ -63,15 +69,10 @@ func (dl Downloader) Download(
 			return filepath.Join(dir, entry.Name()), nil
 		}
 	}
-	// Side channel for loading config because of how the package is
-	// unfortunately structured.
-	config.OutputPath = dir
-	// <cleaned-url>/<quality>_<cleaned-title>
 	if err := os.MkdirAll(dir, 0755); err != nil && !os.IsExist(err) {
 		return "", errors.Wrap(err, "preparing directories")
 	}
-	config.FFmpeg = dl.FFmpeg
-	tmp, err := Download(URL, start, end, q)
+	tmp, err := dl.download(URL, start, end, q)
 	if err != nil {
 		return "", err
 	}
@@ -134,8 +135,8 @@ func (q Quality) String() string {
 	}
 }
 
-// Download a video from the specified url.
-func Download(
+// download a video from the specified url.
+func (dl Downloader) download(
 	videoURL string,
 	start, end float64,
 	quality Quality,
@@ -212,12 +213,15 @@ func Download(
 				break
 			}
 		}
-		dl := downloader.Downloader{
-			Config: config.NewFromGlobal(),
+		cfg := config.NewFromGlobal()
+		cfg.FFmpeg = dl.FFmpeg
+		d := downloader.Downloader{
+			Config: cfg,
+			Output: dl.Out,
 		}
-		path, err = dl.Download(&item, videoURL, start, end)
+		path, err = d.Download(&item, videoURL, start, end)
 		if err != nil {
-			return "", errors.Wrap(err, "downloading")
+			return "", err
 		}
 	}
 	return path, nil
