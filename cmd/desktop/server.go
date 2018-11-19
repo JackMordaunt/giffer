@@ -25,6 +25,7 @@ type UI struct {
 	Router  *mux.Router
 	Static  http.Handler
 	Verbose bool
+	Out io.Writer
 
 	gifmap map[string]http.Handler
 	init   sync.Once
@@ -42,8 +43,14 @@ func (ui *UI) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 func (ui *UI) routes() {
 	if ui.Verbose {
+		var out io.Writer
+		if ui.Out != nil {
+			out = ui.Out
+		} else {
+			out = os.Stdout
+		}
 		log := Log{
-			Logger:   log.New(LogWriteHeaderErrors{Out: os.Stdout}, "", 0),
+			Logger:   log.New(LogWriteHeaderErrors{Out: out}, "", 0),
 			ShowBody: true,
 		}
 		ui.Router.Use(log.Middleware)
@@ -140,6 +147,7 @@ func (ui *UI) gifs() http.HandlerFunc {
 //	gif isn't ready to be downloaded, an appropriate message is returned.
 type Gif struct {
 	Upgrader *websocket.Upgrader
+	Out io.Writer
 
 	file        *RenderedGif
 	subs        map[*websocket.Conn]struct{}
@@ -179,7 +187,7 @@ func (g *Gif) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 func (g *Gif) subscribe(w http.ResponseWriter, r *http.Request) {
 	c, err := g.Upgrader.Upgrade(w, r, nil)
 	if err != nil {
-		log.Printf("upgrading websocket: %v", err)
+		g.logf("upgrading websocket: %v", err)
 		return
 	}
 	g.connections <- c
@@ -208,34 +216,41 @@ func (g *Gif) run() {
 			g.file = img
 			for s := range g.subs {
 				if err := s.WriteJSON(msg{}); err != nil {
-					log.Printf("writing json to websocket: %v", err)
+					g.logf("writing json to websocket: %v", err)
 				}
 				if err := s.Close(); err != nil {
-					log.Printf("closing websocket: %v", err)
+					g.logf("closing websocket: %v", err)
 				}
 				delete(g.subs, s)
 			}
 		case err := <-g.failed:
 			for s := range g.subs {
 				if err := s.WriteJSON(msg{Err: err.Error()}); err != nil {
-					log.Printf("writing json to websocket: %v", err)
+					g.logf("writing json to websocket: %v", err)
 				}
 				if err := s.Close(); err != nil {
-					log.Printf("closing websocket: %v", err)
+					g.logf("closing websocket: %v", err)
 				}
 				delete(g.subs, s)
 			}
 		case conn := <-g.connections:
 			if g.file != nil {
 				if err := conn.WriteJSON(msg{}); err != nil {
-					log.Printf("writing json to websocket: %v", err)
+					g.logf("writing json to websocket: %v", err)
 				}
 				if err := conn.Close(); err != nil {
-					log.Printf("closing websocket: %v", err)
+					g.logf("closing websocket: %v", err)
 				}
 			} else {
 				g.subs[conn] = struct{}{}
 			}
 		}
 	}
+}
+
+func (g *Gif) logf(f string, v ...interface{}) (int, error) {
+	if g.Out == nil {
+		return 0, nil
+	}
+	return fmt.Fprintf(g.Out, f, v...)
 }
