@@ -4,6 +4,7 @@ package main
 import (
 	"archive/zip"
 	"bytes"
+	"encoding/binary"
 	"flag"
 	"fmt"
 	"image/png"
@@ -96,6 +97,22 @@ func main() {
 			Task{
 				Name: "compile ui",
 				Op: func() error {
+					var (
+						uiFiles      = "/Users/jack/dev/personal/giffer/cmd/desktop/ui/src"
+						checksumFile = "/Users/jack/dev/personal/giffer/cmd/desktop/ui/checksum"
+					)
+					h, err := Hash(uiFiles)
+					if err != nil {
+						return errors.Wrap(err, "hashing ui files")
+					}
+					checksum, err := ioutil.ReadFile(checksumFile)
+					if err != nil && !os.IsNotExist(err) {
+						return errors.Wrap(err, "reading checksum file")
+					}
+					if !os.IsNotExist(err) && h == binary.LittleEndian.Uint64(checksum) {
+						return nil
+					}
+					fmt.Printf("compile ui: checksum mismatch: recompiling\n")
 					cmd := exec.Command("yarn", "build")
 					cmd.Dir = "/Users/jack/dev/personal/giffer/cmd/desktop/ui"
 					if out, err := cmd.CombinedOutput(); err != nil {
