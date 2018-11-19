@@ -36,6 +36,7 @@ import (
 // Downloader is responsible for downloading videos.
 type Downloader struct {
 	Dir string
+	FFmpeg string
 }
 
 // Download the video from URL into Dir and return the full path to the 
@@ -45,6 +46,7 @@ func (dl Downloader) Download(
 	start, end float64,
 	q Quality,
 ) (string, error) {
+	
 	input := fmt.Sprintf("%s_%f_%f_%s", URL, start, end, q)
 	h, err := hash(input)
 	if err != nil {
@@ -68,6 +70,7 @@ func (dl Downloader) Download(
 	if err := os.MkdirAll(dir, 0755); err != nil && !os.IsExist(err) {
 		return "", errors.Wrap(err, "preparing directories")
 	}
+	config.FFmpeg = dl.FFmpeg
 	tmp, err := Download(URL, start, end, q)
 	if err != nil {
 		return "", err

@@ -24,6 +24,7 @@ var (
 	devServer string
 	verbose   bool
 	headless  bool
+	ffmpeg    string
 	static    http.Handler // responsible for serving UI files.
 )
 
@@ -33,6 +34,7 @@ func init() {
 	flag.StringVar(&devServer, "dev-proxy", "", "proxy to forward to (eg, yarn run serve)")
 	flag.BoolVar(&verbose, "v", false, "verbose mode")
 	flag.BoolVar(&headless, "headless", false, "headless mode; run only the server")
+	flag.StringVar(&ffmpeg, "ffmpeg", "", "custom path to ffmpeg binary")
 	flag.Parse()
 	if devServer != "" {
 		original := devServer
@@ -56,13 +58,14 @@ func main() {
 	ui := &UI{
 		App: &Giffer{
 			Downloader: &giffer.Downloader{
-				Dir: "tmp/download",
+				Dir: "Giffer.app/Contents/Resources/tmp/download",
 			},
 			FFMpeg: &giffer.FFMpeg{
 				Debug: verbose,
+				Use:   "Giffer.app/Contents/Resources/ffmpeg",
 			},
 			Store: &gifdb{
-				Dir: "tmp/gifs",
+				Dir: "Giffer.app/Contents/Resources/tmp/gifs",
 			},
 		},
 		Router:  mux.NewRouter(),

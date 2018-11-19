@@ -11,6 +11,10 @@ import (
 
 // FFMpeg wraps the ffmpeg binary.
 type FFMpeg struct {
+	// Use is a path to an ffmpeg binary.
+	// If empty, system path is used.
+	Use string
+	// Debug logs the ffmpeg command.
 	Debug bool
 }
 
@@ -26,7 +30,11 @@ func (f FFMpeg) Convert(
 	var (
 		out  bytes.Buffer
 		args []string
+		bin  = "ffmpeg"
 	)
+	if f.Use != "" {
+		bin = f.Use
+	}
 	args = append(args, "-i", video)
 	if width > 0 || height > 0 || fps > 0 {
 		var vfargs []string
@@ -50,13 +58,13 @@ func (f FFMpeg) Convert(
 		"-f", format, "-",
 	)
 	if f.Debug {
-		log.Printf("ffmpeg %s", strings.Join(args, " "))
+		log.Printf("%s %s", bin, strings.Join(args, " "))
 	}
 	cmd := CmdPipe{
 		Out:   &out,
 		Debug: f.Debug,
 		Stack: []*exec.Cmd{
-			exec.Command("ffmpeg", args...),
+			exec.Command(bin, args...),
 		},
 	}
 	return &out, cmd.Run()
