@@ -29,39 +29,29 @@ const plist = `
 <plist version="1.0">
 <dict>
 	<key>CFBundleExecutable</key>
-	<string>giffer</string>
+		<string>giffer.sh</string>
 	<key>CFBundleIconFile</key>
-	<string>icon.icns</string>
+		<string>icon.icns</string>
 	<key>CFBundleIdentifier</key>
-	<string>com.jackmordaunt.giffer</string>
+		<string>com.jackmordaunt.giffer</string>
 	<key>NSHighResolutionCapable</key>
-	<true/>
-	<key>NSSupportsAutomaticGraphicsSwitching</key>
-	<true/>
+		<true/>
 	<key>NSAppTransportSecurity</key>
-	<dict>
-		<key>NSExceptionDomains</key>
 		<dict>
-			<key>localhost</key>
-			<dict>
-			<key>NSExceptionAllowsInsecureHTTPLoads</key>
-			<true/>
-			<key>NSIncludesSubdomains</key>
-			<true/>
-			</dict>
+			<key>NSExceptionDomains</key>
+				<dict>
+					<key>localhost</key>
+						<dict>
+							<key>NSExceptionAllowsInsecureHTTPLoads</key>
+								<true/>
+							<key>NSIncludesSubdomains</key>
+								<true/>
+						</dict>
+				</dict>
 		</dict>
-	</dict>	
 </dict>
 </plist>
 `
-
-// <key>ProgramArguments</key>
-// <array>
-// 	<string>giffer</string>
-// 	<string>-v</string>
-// 	<string>-ffmpeg</string>
-// 	<string>Resources/ffmpeg</string>
-// </array>
 
 var (
 	dist   string
@@ -81,14 +71,13 @@ func init() {
 func main() {
 	if runtime.GOOS == "darwin" {
 		var (
-			contents   = filepath.Join(dist, "Giffer.app", "Contents")
-			macos      = filepath.Join(dist, "Giffer.app", "Contents", "MacOS")
-			resources  = filepath.Join(dist, "Giffer.app", "Contents", "Resources")
-			info       = filepath.Join(dist, "Giffer.app", "Contents", "Info.plist")
-			iconf      = filepath.Join(dist, "Giffer.app", "Contents", "Resources", "icon.icns")
-			frameworks = filepath.Join(dist, "Giffer.app", "Contents", "Frameworks")
+			contents  = filepath.Join(dist, "Giffer.app", "Contents")
+			macos     = filepath.Join(dist, "Giffer.app", "Contents", "MacOS")
+			resources = filepath.Join(dist, "Giffer.app", "Contents", "Resources")
+			info      = filepath.Join(dist, "Giffer.app", "Contents", "Info.plist")
+			iconf     = filepath.Join(dist, "Giffer.app", "Contents", "Resources", "icon.icns")
 		)
-		for _, dir := range []string{contents, macos, resources, frameworks} {
+		for _, dir := range []string{contents, macos, resources} {
 			if err := os.MkdirAll(dir, 0755); err != nil && !os.IsExist(err) {
 				log.Fatalf("preparing directory: %v", err)
 			}
@@ -116,6 +105,29 @@ func main() {
 					cmd := exec.Command("yarn", "build")
 					cmd.Dir = "/Users/jack/dev/personal/giffer/cmd/desktop/ui"
 					if out, err := cmd.CombinedOutput(); err != nil {
+						return errors.Wrap(err, string(out))
+					}
+					buf := make([]byte, 64)
+					binary.LittleEndian.PutUint64(buf, h)
+					return ioutil.WriteFile(checksumFile, buf, 0644)
+				},
+			},
+			Task{
+				Name: "write wrapper script",
+				Op: func() error {
+					wrapper := strings.Join([]string{
+						"#!/usr/bin/env bash\n",
+						"DIR=$(cd \"$(dirname \"$0\")\"; pwd)\n",
+						"$DIR/giffer ",
+						"-v ",
+						"-ffmpeg $DIR/../Resources/ffmpeg ",
+						"-log $DIR/../giffer.log ",
+					}, "")
+					name := filepath.Join(macos, "giffer.sh")
+					if err := ioutil.WriteFile(name, []byte(wrapper), 0777); err != nil {
+						return errors.Wrap(err, "writing wrapper file")
+					}
+					if out, err := exec.Command("chmod", "+x", name).CombinedOutput(); err != nil {
 						return errors.Wrap(err, string(out))
 					}
 					return nil
