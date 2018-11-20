@@ -61,22 +61,22 @@ Building cross platform for desktop is a little bit more complex than a simple `
 
 MVP  
 - [x] Produce Gif image from URL  
-        - [x] Download video files from various common sites  
-        - [x] Convert video to Gif image  
-        - [x] Persist produced Gif images  
-        - [x] Save image to local disk (via drag)  
+    - [x] Download video files from various common sites  
+    - [x] Convert video to Gif image  
+    - [x] Persist produced Gif images  
+    - [x] Save image to local disk (via drag)  
 - Platform Bundles  
-        - [x] `.app` for MacOS  
-        - [ ] `.exe` for Windows  
+    - [x] `.app` for MacOS  
+    - [ ] `.exe` for Windows  
 
 Refinements  
 - [ ] List and manipulate stored Gif images  
-        - [ ] Edit name and other metadata  
-        - [ ] Encode caption onto Gif  
-        - [ ] Download/Save button  
-        - [ ] Shareable links  
-        - [ ] Drag resize  
-        - [ ] Interactive clip selection  
+    - [ ] Edit name and other metadata  
+    - [ ] Encode caption onto Gif  
+    - [ ] Download/Save button  
+    - [ ] Shareable links  
+    - [ ] Drag resize  
+    - [ ] Interactive clip selection  
 - [ ] Support for local video files  
 - [ ] Authentication (eg, OAuth)  
 - [ ] Authorisation (eg, different user experience based on account attributes)  
