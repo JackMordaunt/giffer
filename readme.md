@@ -45,7 +45,7 @@ The http endpoints include a static file server to serve the UI, endpoints to cr
 
 The UI code lives inside `cmd/desktop/ui`. Since the UI is coupled to the desktop application, it made sense to place it in this sub directory. `yarn` is used to develop and compile the Vue based UI.  
 
-#### Building  
+### Building  
 
 Package `cmd/build` is the build "script" designed to produce standalone  artifacts, such as `Giffer.app` for Mac and `Giffer.exe` for Windows, ready for distribution.  
 
