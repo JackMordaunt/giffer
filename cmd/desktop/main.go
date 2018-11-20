@@ -75,12 +75,13 @@ func main() {
 		App: &Giffer{
 			Downloader: &giffer.Downloader{
 				Dir:    filepath.Join(filepath.Dir(ffmpeg), "tmp/downloads"),
+				Debug:  verbose,
 				FFmpeg: ffmpeg,
 				Out:    logf,
 			},
-			FFMpeg: &giffer.FFMpeg{
-				Debug: verbose,
-				Use:   ffmpeg,
+			Transcoder: &giffer.Transcoder{
+				Debug:  verbose,
+				FFmpeg: ffmpeg,
 			},
 			Store: &gifdb{
 				Dir: filepath.Join(filepath.Dir(ffmpeg), "tmp/gifs"),

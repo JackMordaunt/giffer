@@ -48,7 +48,10 @@ func main() {
 		videofile = "tmp"
 	} else if url != "" {
 		dl := giffer.Downloader{
-			Dir: "./tmp/dl",
+			Dir:    "./tmp/dl",
+			FFmpeg: "ffmpeg",
+			Debug:  debug,
+			Out:    os.Stdout,
 		}
 		downloaded, err := dl.Download(url, 0, 0, giffer.Medium)
 		if err != nil {
@@ -56,10 +59,12 @@ func main() {
 		}
 		videofile = downloaded
 	}
-	ffmpeg := giffer.FFMpeg{
-		Debug: debug,
+	t := giffer.Transcoder{
+		FFmpeg: "ffmpeg",
+		Debug:  debug,
+		Out:    os.Stdout,
 	}
-	gif, err := ffmpeg.Convert(videofile, fps, width, height, "gif", "gif")
+	gif, err := t.Convert(videofile, fps, width, height, "gif", "gif")
 	if err != nil {
 		log.Fatalf("converting to gif: %v", err)
 	}

@@ -15,7 +15,7 @@ import (
 // Giffer wraps the giffer business logic.
 type Giffer struct {
 	*giffer.Downloader
-	*giffer.FFMpeg
+	*giffer.Transcoder
 	Store GifStore
 }
 

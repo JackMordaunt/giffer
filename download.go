@@ -38,6 +38,7 @@ import (
 type Downloader struct {
 	Dir string
 	FFmpeg string
+	Debug bool
 	Out io.Writer
 }
 
@@ -48,8 +49,10 @@ func (dl Downloader) Download(
 	start, end float64,
 	q Quality,
 ) (string, error) {
+	// Side channel for loading config because of how the package is
+	// unfortunately structured.
 	config.FFmpeg = dl.FFmpeg
-	fmt.Fprintf(dl.Out, "ffmpeg: %q\n", dl.FFmpeg)	
+	dl.logf("ffmpeg: %q\n", dl.FFmpeg)	
 	input := fmt.Sprintf("%s_%f_%f_%s", URL, start, end, q)
 	h, err := hash(input)
 	if err != nil {
@@ -81,6 +84,13 @@ func (dl Downloader) Download(
 		return "", errors.Wrap(err, "renaming temporary file")
 	}
 	return real, nil
+}
+
+func (dl Downloader) logf(f string, v ...interface{}) {
+	if !dl.Debug || dl.Out == nil {
+		return 
+	}
+	fmt.Fprintf(dl.Out, f, v...)
 }
 
 // Quality is an enum representing the various video qualities.

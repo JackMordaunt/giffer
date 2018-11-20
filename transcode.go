@@ -3,25 +3,26 @@ package giffer
 import (
 	"bytes"
 	"fmt"
-	"log"
+	"io"
 	"strings"
 
 	"os/exec"
 )
 
-// FFMpeg wraps the ffmpeg binary.
-type FFMpeg struct {
-	// Use is a path to an ffmpeg binary.
+// Transcoder converts video files to Gif images by wrappping FFmpeg.
+type Transcoder struct {
+	// FFmpeg is a path to an FFmpeg binary.
 	// If empty, system path is used.
-	Use string
-	// Debug logs the ffmpeg command.
+	FFmpeg string
+	// Debug logs the FFmpeg command.
 	Debug bool
+	Out   io.Writer
 }
 
 // Convert a video into that of the specified encoding and format between start
 // and end.
 // If end is zero we convert from start until the end of the video.
-func (f FFMpeg) Convert(
+func (t Transcoder) Convert(
 	video string,
 	fps float64,
 	width, height int,
@@ -32,8 +33,8 @@ func (f FFMpeg) Convert(
 		args []string
 		bin  = "ffmpeg"
 	)
-	if f.Use != "" {
-		bin = f.Use
+	if t.FFmpeg != "" {
+		bin = t.FFmpeg
 	}
 	args = append(args, "-i", video)
 	if width > 0 || height > 0 || fps > 0 {
@@ -57,15 +58,22 @@ func (f FFMpeg) Convert(
 		"-c:v", encoding,
 		"-f", format, "-",
 	)
-	if f.Debug {
-		log.Printf("%s %s", bin, strings.Join(args, " "))
+	if t.Debug {
+		t.logf("%s %s", bin, strings.Join(args, " "))
 	}
 	cmd := CmdPipe{
 		Out:   &out,
-		Debug: f.Debug,
+		Debug: t.Debug,
 		Stack: []*exec.Cmd{
 			exec.Command(bin, args...),
 		},
 	}
 	return &out, cmd.Run()
+}
+
+func (t Transcoder) logf(f string, v ...interface{}) {
+	if !t.Debug || t.Out == nil {
+		return
+	}
+	fmt.Fprintf(t.Out, f, v...)
 }
