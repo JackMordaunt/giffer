@@ -53,7 +53,7 @@ func main() {
 			Debug:  debug,
 			Out:    os.Stdout,
 		}
-		downloaded, err := dl.Download(url, 0, 0, giffer.Medium)
+		downloaded, err := dl.Download(url, start, end, giffer.Medium)
 		if err != nil {
 			log.Fatalf("downloading: %v", err)
 		}
