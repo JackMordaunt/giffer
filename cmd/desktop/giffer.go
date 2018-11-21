@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"path/filepath"
 	"strings"
 
@@ -15,7 +16,7 @@ import (
 // Giffer wraps the giffer business logic.
 type Giffer struct {
 	*giffer.Downloader
-	*giffer.Transcoder
+	*giffer.Engine
 	Store GifStore
 }
 
@@ -30,11 +31,11 @@ type GifStore interface {
 func (g Giffer) GififyURL(
 	url string,
 	start, end, fps float64,
-	width, height int,
+	width, height, fuzz int,
 	q giffer.Quality,
 ) (*RenderedGif, error) {
 	if g.Store == nil {
-		return g.make(url, start, end, fps, width, height, q)
+		return g.make(url, start, end, fps, width, height, fuzz, q)
 	}
 	key, err := hash(fmt.Sprintf("%s_%f_%f_%f_%d_%d_%d", url, start, end, fps, width, height, q))
 	if err != nil {
@@ -47,7 +48,7 @@ func (g Giffer) GififyURL(
 	if ok && img != nil {
 		return img, nil
 	}
-	img, err = g.make(url, start, end, fps, width, height, q)
+	img, err = g.make(url, start, end, fps, width, height, fuzz, q)
 	if err != nil {
 		return nil, err
 	}
@@ -64,16 +65,27 @@ func (g Giffer) GififyURL(
 func (g Giffer) make(
 	url string,
 	start, end, fps float64,
-	width, height int,
+	width, height, fuzz int,
 	q giffer.Quality,
 ) (*RenderedGif, error) {
 	video, err := g.Download(url, start, end, q)
 	if err != nil {
 		return nil, errors.Wrap(err, "downloading")
 	}
-	gif, err := g.Convert(video, fps, width, height, "gif", "gif")
+	gif, err := g.Transcode(video, start, end, width, height, fps)
+	if err != nil {
+		return nil, errors.Wrap(err, "transcoding video to gif")
+	}
+	if err := g.Crush(gif, fuzz); err != nil {
+		return nil, errors.Wrap(err, "optimising gif image")
+	}
+	defer g.Clean()
+	gifdata, err := ioutil.ReadFile(gif)
+	if err != nil {
+		return nil, errors.Wrap(err, "buffering gif")
+	}
 	img := &RenderedGif{
-		Reader:   gif,
+		Reader:   bytes.NewBuffer(gifdata),
 		FileName: sanitiseFilepath(strings.Split(filepath.Base(video), ".")[0] + ".gif"),
 	}
 	return img, nil

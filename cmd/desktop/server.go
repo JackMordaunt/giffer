@@ -25,7 +25,7 @@ type UI struct {
 	Router  *mux.Router
 	Static  http.Handler
 	Verbose bool
-	Out io.Writer
+	Out     io.Writer
 
 	gifmap map[string]http.Handler
 	init   sync.Once
@@ -72,6 +72,7 @@ func (ui *UI) gifify() http.HandlerFunc {
 			Width   int     `json:"width,omitempty"`
 			Height  int     `json:"height,omitempty"`
 			Output  string  `json:"output,omitempty"`
+			Fuzz    int     `json:"fuzz,omitempty"`
 			Quality int     `json:"quality,omitempty"`
 		}
 		var req request
@@ -104,6 +105,7 @@ func (ui *UI) gifify() http.HandlerFunc {
 				req.FPS,
 				req.Width,
 				req.Height,
+				req.Fuzz,
 				giffer.Quality(req.Quality))
 		})
 		key := fmt.Sprintf("%d", h.Sum64())
@@ -112,8 +114,8 @@ func (ui *UI) gifify() http.HandlerFunc {
 			File string `json:"file"`
 			Info string `json:"info"`
 		}
-		// FIXME(jfm): Should these endpoints be typed, instead of
-		// 	relying on assumptions about the routing?
+		// FIXME(jfm): Should these endpoints be typed values, instead 
+		// 	of relying on assumptions about the routing?
 		writeJSON(w, response{
 			File: fmt.Sprintf("/gifs/%s", key),
 			Info: fmt.Sprintf("/gifs/%s/info", key),
@@ -147,7 +149,7 @@ func (ui *UI) gifs() http.HandlerFunc {
 //	gif isn't ready to be downloaded, an appropriate message is returned.
 type Gif struct {
 	Upgrader *websocket.Upgrader
-	Out io.Writer
+	Out      io.Writer
 
 	file        *RenderedGif
 	subs        map[*websocket.Conn]struct{}

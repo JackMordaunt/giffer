@@ -81,7 +81,7 @@ func (eng *Engine) Cut(video string, cuts ...[2]int) (string, error) {
 // Returns a filepath to the gif image.
 func (eng *Engine) Transcode(
 	video string,
-	start, end int,
+	start, end float64,
 	width, height int,
 	fps float64,
 ) (string, error) {
@@ -116,8 +116,8 @@ func (eng *Engine) Transcode(
 	}()
 	genPalette := eng.command(
 		eng.FFmpeg,
-		"-ss", fmt.Sprintf("%d;omitempty", start),
-		"-t", fmt.Sprintf("%d;omitempty", duration),
+		"-ss", fmt.Sprintf("%2f;omitempty", start),
+		"-t", fmt.Sprintf("%2f;omitempty", duration),
 		"-i", video,
 		"-vf", palettegen,
 		"-y", "palette.png",
@@ -127,8 +127,8 @@ func (eng *Engine) Transcode(
 	}
 	makeGif := eng.command(
 		eng.FFmpeg,
-		"-ss", fmt.Sprintf("%d;omitempty", start),
-		"-t", fmt.Sprintf("%d;omitempty", duration),
+		"-ss", fmt.Sprintf("%2f;omitempty", start),
+		"-t", fmt.Sprintf("%2f;omitempty", duration),
 		"-i", video, "-i", "palette.png",
 		"-lavfi", fmt.Sprintf("%s [x]; [x][1:v] paletteuse", filters),
 		"-y", output,
@@ -157,13 +157,12 @@ func (eng *Engine) Crush(gif string, fuzz int) error {
 }
 
 // Clean the temporary files.
-func (eng *Engine) Clean() error {
+func (eng *Engine) Clean() {
 	for _, f := range eng.Junk {
 		if err := os.Remove(f); err != nil {
-			return err
+			eng.logf("clean: %v\n", err)
 		}
 	}
-	return nil
 }
 
 // command creates a new exec.Cmd after removing empty arguments.
