@@ -4,7 +4,7 @@
 
 ## Take a look  
 
-<img src="docs/usage.gif" alt="usage animation" style="display: block; margin: auto;">
+<img src="docs/usage.gif" alt="usage animation" width="100%">
 
 ![input](docs/input.jpeg)
 
