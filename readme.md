@@ -80,8 +80,10 @@ Refinements
 - [ ] Support for local video files  
 - [ ] Authentication (eg, OAuth)  
 - [ ] Authorisation (eg, different user experience based on account attributes)  
-
-Infrastructure  
+Infrastructure 
+- [ ] Github releases   
 - [ ] Hosted storage  
 - [ ] Cloud hosted web ui  
 - [ ] Continuous integration  
+- [ ] Code signing  
+- [ ] Landing page website  
