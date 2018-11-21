@@ -59,15 +59,20 @@ func main() {
 		}
 		videofile = downloaded
 	}
-	t := giffer.Transcoder{
-		FFmpeg: "ffmpeg",
-		Debug:  debug,
-		Out:    os.Stdout,
+	t := giffer.Engine{
+		FFmpeg:  "ffmpeg",
+		Convert: "convert",
+		Debug:   debug,
+		Out:     os.Stdout,
 	}
-	gif, err := t.Convert(videofile, fps, width, height, "gif", "gif")
+	gif, err := t.Transcode(videofile, 0, 0, width, height, fps)
 	if err != nil {
 		log.Fatalf("converting to gif: %v", err)
 	}
+	if err := t.Crush(gif, 4); err != nil {
+		log.Fatalf("optimising gif: %v", err)
+	}
+	defer t.Clean()
 	var out io.WriteCloser
 	if terminal.IsTerminal(int(os.Stdout.Fd())) {
 		out = os.Stdout
@@ -78,7 +83,12 @@ func main() {
 		}
 	}
 	defer out.Close()
-	if _, err := io.Copy(out, gif); err != nil {
+	gifFile, err := os.Open(gif)
+	if err != nil {
+		log.Fatalf("opening gif file: %v", err)
+	}
+	defer gifFile.Close()
+	if _, err := io.Copy(out, gifFile); err != nil {
 		log.Fatalf("writing gif to file: %v", err)
 	}
 }
