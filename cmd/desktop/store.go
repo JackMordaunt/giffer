@@ -14,6 +14,9 @@ import (
 	"github.com/pkg/errors"
 )
 
+// Gif images are stored as-is on disk with a corresponding json file that
+// contains the metadata. Why did I use goroutines to parellelise writing just
+// two files? Don't ask me that, man.
 type gifdb struct {
 	Dir  string
 	init sync.Once
