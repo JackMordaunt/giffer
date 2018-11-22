@@ -122,6 +122,7 @@ func main() {
 						"-v ",
 						"-ffmpeg $DIR/../Resources/ffmpeg ",
 						"-log $DIR/../giffer.log ",
+						"-tmp $DIR/../Resources/tmp ",
 					}, "")
 					name := filepath.Join(macos, "giffer.sh")
 					if err := ioutil.WriteFile(name, []byte(wrapper), 0777); err != nil {

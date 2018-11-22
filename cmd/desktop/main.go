@@ -28,6 +28,7 @@ var (
 	verbose   bool
 	headless  bool
 	ffmpeg    string
+	tmp       string
 	logfile   string
 	logf      *os.File
 	static    http.Handler // responsible for serving UI files.
@@ -40,6 +41,7 @@ func init() {
 	flag.BoolVar(&verbose, "v", false, "verbose mode")
 	flag.BoolVar(&headless, "headless", false, "headless mode; run only the server")
 	flag.StringVar(&ffmpeg, "ffmpeg", "", "custom path to ffmpeg binary")
+	flag.StringVar(&tmp, "tmp", "tmp", "path to store generated files")
 	flag.StringVar(&logfile, "log", "", "path to log file to capture stdout")
 	flag.Parse()
 	if logfile != "" {
@@ -74,18 +76,19 @@ func main() {
 	ui := &UI{
 		App: &Giffer{
 			Downloader: &giffer.Downloader{
-				Dir:    filepath.Join(filepath.Dir(ffmpeg), "tmp/downloads"),
+				Dir:    filepath.Join(tmp, "downloads"),
 				FFmpeg: ffmpeg,
 				Debug:  verbose,
 				Out:    logf,
 			},
 			Engine: &giffer.Engine{
+				Dir:    filepath.Join(tmp, "junk"),
 				FFmpeg: ffmpeg,
 				Debug:  verbose,
 				Out:    logf,
 			},
 			Store: &gifdb{
-				Dir: filepath.Join(filepath.Dir(ffmpeg), "tmp/gifs"),
+				Dir: filepath.Join(tmp, "gifs"),
 			},
 		},
 		Router:  mux.NewRouter(),
