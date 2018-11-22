@@ -9,17 +9,21 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"sync"
 
 	"github.com/pkg/errors"
 )
 
 // Engine implements video and image manipulation.
 type Engine struct {
+	Dir     string    // Directory to write temporary files.
 	FFmpeg  string    // Path to FFmpeg binary.
 	Convert string    // Path to imagemagick Convert binary.
 	Debug   bool      // Print commands used.
 	Out     io.Writer // Writer to use if debug is true.
 	Junk    []string  // Temporary files to cleanup.
+
+	once sync.Once
 }
 
 // Cut and merge the target file into the specified time slices.
@@ -27,11 +31,14 @@ type Engine struct {
 // respectively.
 // Returns a filepath to the merged file.
 func (eng *Engine) Cut(video string, cuts ...[2]int) (string, error) {
+	if err := eng.init(); err != nil {
+		return "", err
+	}
 	var (
 		cutfiles []string
 		entries  []string
-		filelist = "tmp_file_list.txt"
-		merged   = fmt.Sprintf("merged%s", filepath.Ext(video))
+		filelist = eng.path("tmp_file_list.txt")
+		merged   = eng.path(fmt.Sprintf("merged%s", filepath.Ext(video)))
 	)
 	defer func() {
 		eng.Junk = append(eng.Junk, append(cutfiles, filelist, merged)...)
@@ -41,7 +48,7 @@ func (eng *Engine) Cut(video string, cuts ...[2]int) (string, error) {
 		if start > end {
 			return "", fmt.Errorf("start > end: %d > %d", start, end)
 		}
-		output := fmt.Sprintf("tmp_%d%s", ii, filepath.Ext(video))
+		output := eng.path(fmt.Sprintf("tmp_%d%s", ii, filepath.Ext(video)))
 		cutSlice := eng.command(
 			eng.FFmpeg,
 			"-ss", fmt.Sprintf("%d", start),
@@ -85,11 +92,15 @@ func (eng *Engine) Transcode(
 	width, height int,
 	fps float64,
 ) (string, error) {
+	if err := eng.init(); err != nil {
+		return "", err
+	}
 	var (
 		duration   = end - start
 		filters    string
 		palettegen string
-		output     = fmt.Sprintf("%s.gif", strings.Split(video, ".")[0])
+		palette    = eng.path("palette.png")
+		output     = eng.path(fmt.Sprintf("%s.gif", strings.Split(filepath.Base(video), ".")[0]))
 	)
 	if height < -2 {
 		height = -2
@@ -112,7 +123,7 @@ func (eng *Engine) Transcode(
 		palettegen = "palettegen"
 	}
 	defer func() {
-		eng.Junk = append(eng.Junk, "palette.png", output)
+		eng.Junk = append(eng.Junk, palette, output)
 	}()
 	genPalette := eng.command(
 		eng.FFmpeg,
@@ -120,7 +131,7 @@ func (eng *Engine) Transcode(
 		"-t", fmt.Sprintf("%2f;omitempty", duration),
 		"-i", video,
 		"-vf", palettegen,
-		"-y", "palette.png",
+		"-y", palette,
 	)
 	if out, err := genPalette.CombinedOutput(); err != nil {
 		return "", errors.Wrapf(err, "generating palette: %s", string(out))
@@ -129,7 +140,7 @@ func (eng *Engine) Transcode(
 		eng.FFmpeg,
 		"-ss", fmt.Sprintf("%2f;omitempty", start),
 		"-t", fmt.Sprintf("%2f;omitempty", duration),
-		"-i", video, "-i", "palette.png",
+		"-i", video, "-i", palette,
 		"-lavfi", fmt.Sprintf("%s [x]; [x][1:v] paletteuse", filters),
 		"-y", output,
 	)
@@ -213,4 +224,24 @@ func (eng *Engine) logf(f string, v ...interface{}) (int, error) {
 		return fmt.Fprintf(eng.Out, f, v...)
 	}
 	return 0, nil
+}
+
+// path resolves the given path segments against the configured directory.
+func (eng *Engine) path(s ...string) string {
+	p := filepath.Join(s...)
+	eng.logf("dir: %s, p: %s\n", eng.Dir, p)
+	p = strings.Replace(p, eng.Dir, "", 1)
+	return filepath.Join(eng.Dir, p)
+}
+
+func (eng *Engine) init() (err error) {
+	eng.once.Do(func() {
+		err = os.MkdirAll(eng.Dir, 0755)
+		if err != nil && !os.IsExist(err) {
+			err = errors.Wrap(err, "preparing directories")
+		} else if os.IsExist(err) {
+			err = nil
+		}
+	})
+	return err
 }
