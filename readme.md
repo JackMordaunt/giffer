@@ -79,7 +79,10 @@ Refinements
     - [ ] Interactive clip selection  
 - [ ] Support for local video files  
 - [ ] Authentication (eg, OAuth)  
-- [ ] Authorisation (eg, different user experience based on account attributes)  
+- [ ] Authorisation (eg, different user experience based on account attributes) 
+- [ ] Compress and optimize gif images (imagemagick? pure Go?)  
+    - imagemagick is non-trivial to package and ditribute cross platform  
+
 Infrastructure 
 - [ ] Github releases   
 - [ ] Hosted storage  
