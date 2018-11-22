@@ -80,10 +80,9 @@ func main() {
 				Out:    logf,
 			},
 			Engine: &giffer.Engine{
-				FFmpeg:  ffmpeg,
-				Convert: "convert",
-				Debug:   verbose,
-				Out:     logf,
+				FFmpeg: ffmpeg,
+				Debug:  verbose,
+				Out:    logf,
 			},
 			Store: &gifdb{
 				Dir: filepath.Join(filepath.Dir(ffmpeg), "tmp/gifs"),
