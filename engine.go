@@ -144,6 +144,9 @@ func (eng *Engine) Transcode(
 // Fuzz is a percentage value between 0 and 100, where 0 is best quality, 100 is
 // smallest file size. Optimal is typically 2-5.
 func (eng *Engine) Crush(gif string, fuzz int) error {
+	if eng.Convert == "" {
+		return nil
+	}
 	args := []string{gif}
 	if fuzz > 0 {
 		args = append(args, "-fuzz", fmt.Sprintf("%d%%", fuzz))
