@@ -162,7 +162,6 @@ func main() {
 						"-i", "github.com/jackmordaunt/giffer/cmd/desktop",
 						"--exec", filepath.Join(macos, "giffer"),
 					)
-					cmd.Dir = "/Users/jack/dev/personal/giffer/cmd/build"
 					if out, err := cmd.CombinedOutput(); err != nil {
 						return errors.Wrap(err, string(out))
 					}
