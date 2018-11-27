@@ -25,11 +25,11 @@ var (
 	host      string
 	port      string
 	devServer string
-	verbose   bool
-	headless  bool
 	ffmpeg    string
 	tmp       string
 	logfile   string
+	verbose   bool
+	headless  bool
 	logf      *os.File
 	static    http.Handler // responsible for serving UI files.
 )
@@ -38,11 +38,11 @@ func init() {
 	flag.StringVar(&host, "host", "localhost", "host address to serve on")
 	flag.StringVar(&port, "p", "8080", "port to serve on")
 	flag.StringVar(&devServer, "dev-proxy", "", "proxy to forward to (eg, yarn run serve)")
-	flag.BoolVar(&verbose, "v", false, "verbose mode")
-	flag.BoolVar(&headless, "headless", false, "headless mode; run only the server")
-	flag.StringVar(&ffmpeg, "ffmpeg", "", "custom path to ffmpeg binary")
-	flag.StringVar(&tmp, "tmp", "tmp", "path to store generated files")
-	flag.StringVar(&logfile, "log", "", "path to log file to capture stdout")
+	flag.StringVar(&ffmpeg, "ffmpeg", ffmpeg, "custom path to ffmpeg binary")
+	flag.StringVar(&tmp, "tmp", tmp, "path to store generated files")
+	flag.StringVar(&logfile, "log", logfile, "path to log file to capture stdout")
+	flag.BoolVar(&verbose, "v", verbose, "verbose mode")
+	flag.BoolVar(&headless, "headless", headless, "headless mode; run only the server")
 	flag.Parse()
 	if logfile != "" {
 		var err error
@@ -54,6 +54,9 @@ func init() {
 		logf = os.Stdout
 	}
 	log.SetOutput(logf)
+	if tmp == "" {
+		tmp = "tmp"
+	}
 	if devServer != "" {
 		original := devServer
 		if devServer[0] == ':' {
