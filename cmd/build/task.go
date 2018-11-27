@@ -61,6 +61,7 @@ func (tasks FanOut) Run() (err error) {
 				fmt.Printf("run: %v\n", t.Name)
 				if err := t.Op(); err != nil {
 					failures <- TaskError{Task: t, Err: err}
+					break
 				}
 			}
 		}()
