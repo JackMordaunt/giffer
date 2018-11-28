@@ -62,10 +62,10 @@ func (Browser) open(u string) *exec.Cmd {
 	switch runtime.GOOS {
 	case "darwin":
 		cmd = exec.Command("open", u, "-W")
-	case "linux":
-		cmd = exec.Command("xdg-open", u)
 	case "windows":
-		cmd = exec.Command("start", "/wait", "", u)
+		cmd = exec.Command("start", u)
+	default:
+		cmd = exec.Command("xdg-open", u)
 	}
 	return cmd
 }
