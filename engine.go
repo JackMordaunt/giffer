@@ -125,6 +125,7 @@ func (eng *Engine) Transcode(
 	defer func() {
 		eng.Junk = append(eng.Junk, palette, output)
 	}()
+	// TODO(jfm): make these structured, with omission as a field.
 	genPalette := eng.command(
 		eng.FFmpeg,
 		"-ss", fmt.Sprintf("%2f;omitempty", start),
