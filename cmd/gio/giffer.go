@@ -1,9 +1,7 @@
 package main
 
 import (
-	"bytes"
 	"fmt"
-	"io"
 	"io/ioutil"
 	"path/filepath"
 	"strings"
@@ -24,42 +22,35 @@ type Giffer struct {
 type GifStore interface {
 	Lookup(key string) (*RenderedGif, bool, error)
 	Insert(key string, img *RenderedGif) error
+	// Keys() []string
+	// Last() string
 }
 
-// GififyURL downloads the video at url and creates a .gif based on the spcified
-// parameters.
+// GififyURL downloads the video at url and creates a .gif based on the specified parameters.
 func (g *Giffer) GififyURL(
 	url string,
 	start, end, fps float64,
 	width, height, fuzz int,
-	q giffer.Quality,
 ) (*RenderedGif, error) {
 	if g.Store == nil {
-		return g.make(url, start, end, fps, width, height, fuzz, q)
+		return g.make(url, start, end, fps, width, height, fuzz)
 	}
-	key, err := hash(fmt.Sprintf("%s_%f_%f_%f_%d_%d_%d", url, start, end, fps, width, height, q))
+	key, err := hash(fmt.Sprintf("%s_%f_%f_%f_%d_%d", url, start, end, fps, width, height))
 	if err != nil {
 		return nil, err
 	}
-	if g.Store != nil {
-		img, ok, err := g.Store.Lookup(key)
-		if err != nil {
-			return nil, errors.Wrap(err, "store lookup")
-		}
-		if ok && img != nil {
-			return img, nil
-		}
+	img, ok, err := g.Store.Lookup(key)
+	if err != nil {
+		return nil, errors.Wrap(err, "store lookup")
 	}
-	img, err := g.make(url, start, end, fps, width, height, fuzz, q)
+	if ok && img != nil {
+		return img, nil
+	}
+	img, err = g.make(url, start, end, fps, width, height, fuzz)
 	if err != nil {
 		return nil, err
 	}
-	dup := &RenderedGif{
-		// Trying to copy the data.
-		Reader:   bytes.NewBuffer([]byte(img.Reader.(*bytes.Buffer).String())),
-		FileName: img.FileName,
-	}
-	if err := g.Store.Insert(key, dup); err != nil {
+	if err := g.Store.Insert(key, img); err != nil {
 		return nil, errors.Wrap(err, "inserting gif into store")
 	}
 	return img, nil
@@ -69,9 +60,8 @@ func (g *Giffer) make(
 	url string,
 	start, end, fps float64,
 	width, height, fuzz int,
-	q giffer.Quality,
 ) (*RenderedGif, error) {
-	video, err := g.Download(url, start, end, q)
+	video, err := g.Download(url, start, end)
 	if err != nil {
 		return nil, errors.Wrap(err, "downloading")
 	}
@@ -88,7 +78,7 @@ func (g *Giffer) make(
 		return nil, errors.Wrap(err, "buffering gif")
 	}
 	img := &RenderedGif{
-		Reader:   bytes.NewBuffer(gifdata),
+		Data:     gifdata,
 		FileName: sanitiseFilepath(strings.Split(filepath.Base(video), ".")[0] + ".gif"),
 	}
 	return img, nil
@@ -96,7 +86,7 @@ func (g *Giffer) make(
 
 // RenderedGif wraps the gif data with some metadata.
 type RenderedGif struct {
-	io.Reader
+	Data []byte
 	// FileName is <title>.<ext>
 	FileName string
 }

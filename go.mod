@@ -8,6 +8,7 @@ require (
 	github.com/GeertJohan/go.rice v0.0.0-20170420135705-c02ca9a983da
 	github.com/OneOfOne/xxhash v1.2.8
 	github.com/VividCortex/ewma v1.2.0 // indirect
+	github.com/akavel/rsrc v0.10.2 // indirect
 	github.com/bmizerany/assert v0.0.0-20160611221934-b7ed37b82869 // indirect
 	github.com/daaku/go.zipexe v0.0.0-20150329023125-a5fe2436ffcb // indirect
 	github.com/gonutz/ide v0.0.0-20180502124734-e9fc8c14ed56
@@ -19,6 +20,7 @@ require (
 	github.com/kardianos/osext v0.0.0-20170510131534-ae77be60afb1 // indirect
 	github.com/kkdai/youtube/v2 v2.6.1
 	github.com/mattn/go-runewidth v0.0.12 // indirect
+	github.com/ncruces/zenity v0.6.4 // indirect
 	github.com/nfnt/resize v0.0.0-20180221191011-83c6a9932646 // indirect
 	github.com/pkg/errors v0.9.1
 	github.com/rivo/uniseg v0.2.0 // indirect

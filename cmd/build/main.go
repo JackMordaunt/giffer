@@ -106,13 +106,6 @@ func WriteIcon(in, out string) error {
 	return nil
 }
 
-func omitEmpty(flag, value string) string {
-	if value == "" {
-		return ""
-	}
-	return fmt.Sprintf("%s=%s", flag, value)
-}
-
 // openZip returns the first file in the zip that contains the pattern.
 func openZip(u, dir, pattern string) (*bytes.Buffer, error) {
 	file, err := download(u, filepath.Join(dir, "ffmpeg.zip"))

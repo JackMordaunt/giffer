@@ -120,7 +120,7 @@ func (db *gifdb) Lookup(key string) (*RenderedGif, bool, error) {
 		case string:
 			r.FileName = v
 		case *bytes.Buffer:
-			r.Reader = v
+			r.Data = v.Bytes()
 		}
 	}
 	if failure != nil {
@@ -151,7 +151,7 @@ func (db *gifdb) Insert(key string, img *RenderedGif) (err error) {
 				return errors.Wrap(err, "creating gif file")
 			}
 			defer imgf.Close()
-			if _, err := io.Copy(imgf, img); err != nil {
+			if _, err := io.Copy(imgf, bytes.NewReader(img.Data)); err != nil {
 				return errors.Wrap(err, "persisting gif to disk")
 			}
 			return nil
@@ -189,4 +189,9 @@ func (db *gifdb) Insert(key string, img *RenderedGif) (err error) {
 		err = multierror.Append(err, failure)
 	}
 	return err
+}
+
+func (db *gifdb) Keys() (keys []string) {
+	// how do we figure out what keys are in the db?
+	return keys
 }

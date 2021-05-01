@@ -76,7 +76,7 @@ func (app *Darwin) Build(dist string) error {
 		}
 	}
 	tasks := FanOut([]Task{
-		Task{
+		{
 			Name: "compile ui",
 			Op: func() error {
 				ui, err := filepath.Abs(app.UI)
@@ -109,7 +109,7 @@ func (app *Darwin) Build(dist string) error {
 				return ioutil.WriteFile(checksumFile, buf, 0644)
 			},
 		},
-		Task{
+		{
 			Name: "write wrapper script",
 			Op: func() error {
 				wrapper := strings.Join([]string{
@@ -128,7 +128,7 @@ func (app *Darwin) Build(dist string) error {
 				return nil
 			},
 		},
-		Task{
+		{
 			Name:     "compile binary",
 			Requires: []string{"compile ui"},
 			Op: func() error {
@@ -147,7 +147,7 @@ func (app *Darwin) Build(dist string) error {
 				return nil
 			},
 		},
-		Task{
+		{
 			Name:     "embed resources",
 			Requires: []string{"compile binary"},
 			Op: func() error {
@@ -163,7 +163,7 @@ func (app *Darwin) Build(dist string) error {
 				return nil
 			},
 		},
-		Task{
+		{
 			Name: "create icon.icns",
 			Op: func() error {
 				if app.Icon != "" {
@@ -174,7 +174,7 @@ func (app *Darwin) Build(dist string) error {
 				return nil
 			},
 		},
-		Task{
+		{
 			Name: "create Info.plist",
 			Op: func() error {
 				if err := ioutil.WriteFile(info, []byte(plist), 0644); err != nil {
@@ -183,7 +183,7 @@ func (app *Darwin) Build(dist string) error {
 				return nil
 			},
 		},
-		Task{
+		{
 			Name: "bundle ffmpeg",
 			Op: func() error {
 				var (

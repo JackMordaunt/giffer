@@ -35,7 +35,7 @@ type Windows struct {
 // Build executes the build and writes output to dist.
 func (exe *Windows) Build(dist string) error {
 	tasks := FanOut([]Task{
-		Task{
+		{
 			Name: "compile ui",
 			Op: func() error {
 				ui, err := filepath.Abs(exe.UI)
@@ -68,7 +68,7 @@ func (exe *Windows) Build(dist string) error {
 				return ioutil.WriteFile(checksumFile, buf, 0644)
 			},
 		},
-		Task{
+		{
 			Name: "compile binary",
 			Op: func() error {
 				ldflags := []string{
@@ -98,7 +98,7 @@ func (exe *Windows) Build(dist string) error {
 				return nil
 			},
 		},
-		Task{
+		{
 			Name:     "embed resources",
 			Requires: []string{"compile binary", "compile ui"},
 			Op: func() error {
@@ -115,7 +115,7 @@ func (exe *Windows) Build(dist string) error {
 				return nil
 			},
 		},
-		Task{
+		{
 			Name: "bundle ffmpeg",
 			Op: func() error {
 				var (
