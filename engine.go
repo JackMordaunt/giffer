@@ -32,7 +32,7 @@ type Engine struct {
 // Returns a filepath to the merged file.
 func (eng *Engine) Cut(video string, cuts ...[2]int) (string, error) {
 	if err := eng.init(); err != nil {
-		return "", err
+		return "", fmt.Errorf("initializing engine: %w", err)
 	}
 	var (
 		cutfiles []string
@@ -93,7 +93,7 @@ func (eng *Engine) Transcode(
 	fps float64,
 ) (string, error) {
 	if err := eng.init(); err != nil {
-		return "", err
+		return "", fmt.Errorf("initializing engine: %w", err)
 	}
 	var (
 		duration   = end - start
@@ -237,6 +237,12 @@ func (eng *Engine) path(s ...string) string {
 
 func (eng *Engine) init() (err error) {
 	eng.once.Do(func() {
+		if eng.FFmpeg == "" {
+			eng.FFmpeg = "ffmpeg"
+		}
+		if eng.Dir == "" {
+			return
+		}
 		err = os.MkdirAll(eng.Dir, 0755)
 		if err != nil && !os.IsExist(err) {
 			err = errors.Wrap(err, "preparing directories")
