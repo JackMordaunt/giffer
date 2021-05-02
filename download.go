@@ -66,7 +66,7 @@ func (dl Downloader) download(
 	if err != nil {
 		return "", fmt.Errorf("getting video: %w", err)
 	}
-	outf := filepath.Join(os.TempDir(), v.Title)
+	outf := filepath.Join(os.TempDir(), downloader.SanitizeFilename(v.Title))
 	return outf, d.Download(context.TODO(), v, &v.Formats[0], outf)
 }
 
