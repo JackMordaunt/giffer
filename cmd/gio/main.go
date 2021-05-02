@@ -194,6 +194,9 @@ func (ui *UI) Layout(gtx C) D {
 								l.Rigid(func(gtx C) D {
 									return ui.Form.LayoutFields(gtx, ui.Th)
 								}),
+								l.Flexed(1, func(gtx C) D {
+									return D{Size: gtx.Constraints.Max}
+								}),
 								l.Rigid(func(gtx C) D {
 									return l.Flex{
 										Axis: l.Horizontal,
@@ -218,34 +221,14 @@ func (ui *UI) Layout(gtx C) D {
 							)
 						})
 					}),
+					l.Rigid(func(gtx C) D {
+						return D{Size: image.Point{X: gtx.Px(unit.Dp(10))}}
+					}),
 					l.Flexed(1, func(gtx C) D {
-						return l.UniformInset(unit.Dp(10)).Layout(gtx, func(gtx C) D {
-							return layout.Center.Layout(gtx, func(gtx C) D {
-								var (
-									cs     = &gtx.Constraints
-									width  = gtx.Px(unit.Dp(350))
-									height = gtx.Px(unit.Dp(250))
-								)
-								if ui.GifPlayer.Dimensions.X > 0 && ui.GifPlayer.Dimensions.Y > 0 {
-									cs.Min.Y = ui.GifPlayer.Dimensions.Y
-									cs.Min.X = ui.GifPlayer.Dimensions.X
-								} else {
-									cs.Max.X /= 2
-									cs.Max.Y /= 2
-									if cs.Max.X > width {
-										cs.Max.X = width
-									}
-									if cs.Max.Y > height {
-										cs.Max.Y = height
-									}
-								}
-								return ui.GifPlayer.Layout(gtx)
-							})
-						})
+						return ui.GifPlayer.Layout(gtx)
 					}),
 				)
 			})
-
 		}),
 		layout.Expanded(func(gtx C) D {
 			if !ui.Processing {
@@ -330,37 +313,37 @@ func (f *Form) LayoutActions(gtx C, th *m.Theme) D {
 
 // GifPlayer animates through a series of frames.
 //
-// TODO(jfm): fix! Displays garbled images.
+// TODO(jfm): fix!
 // - playing way too fast
-// - stretching image too much
 type GifPlayer struct {
-	Frames     []paint.ImageOp
-	Delays     []time.Duration
-	Cursor     int
-	Dimensions image.Point
-	since      time.Time
-	img        widget.Image
+	Frames []paint.ImageOp
+	Delays []time.Duration
+	Cursor int
+	since  time.Time
+	img    widget.Image
 }
 
 // Load a Gif image to render.
 func (g *GifPlayer) Load(src *gif.GIF) {
 	g.Frames = make([]paint.ImageOp, len(src.Image))
 	for ii := range src.Image {
-		g.Frames[ii] = paint.NewImageOp(src.Image[ii])
+		s := ImageStack{Config: src.Config}
+		for jj := ii; jj >= 0; jj-- {
+			s.Stack = append(s.Stack, src.Image[jj])
+		}
+		g.Frames[ii] = paint.NewImageOp(s)
 	}
 	g.Delays = make([]time.Duration, len(src.Delay))
 	for ii := range g.Delays {
 		// Gif delays are in 100th of a second.
 		g.Delays[ii] = time.Duration(src.Delay[ii]) / 10 * time.Millisecond
 	}
-	g.Dimensions.X = src.Config.Width
-	g.Dimensions.Y = src.Config.Height
 }
 
 // Ready if the next frame is ready to be displayed.
 func (g *GifPlayer) Ready(gtx C) bool {
 	if len(g.Delays) == 0 {
-		return false
+		return true
 	}
 	var (
 		now     = gtx.Now
@@ -401,5 +384,6 @@ func (g *GifPlayer) Layout(gtx C) D {
 	if g.Ready(gtx) {
 		g.Next(gtx)
 	}
+	g.img.Fit = widget.Fill
 	return g.img.Layout(gtx)
 }
