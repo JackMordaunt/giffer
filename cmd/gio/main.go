@@ -60,8 +60,16 @@ type UI struct {
 	Form       Form
 	GifPlayer  GifPlayer
 	Processing bool
-	cache      *gif.GIF
-	done       chan *gif.GIF
+	cache      *PreparedGif
+	done       chan *PreparedGif
+}
+
+// PreparedGif helper wraps a Gif with FPS metadata.
+// This is needed because Gif itself cannot be relied upon to contain proper FPS data in it's delay
+// slice.
+type PreparedGif struct {
+	*gif.GIF
+	FPS float64
 }
 
 // Loop runs the event loop until terminated.
@@ -91,7 +99,7 @@ func (ui *UI) Init() {
 	ui.Form.Height.SetText("350")
 	ui.Form.Start.SetText("0")
 	ui.Form.End.SetText("3")
-	ui.done = make(chan *gif.GIF)
+	ui.done = make(chan *PreparedGif)
 }
 
 func (ui *UI) Update(gtx C) {
@@ -105,12 +113,13 @@ func (ui *UI) Update(gtx C) {
 			log.Printf("error: opening save file: %v", err)
 		}
 		defer func() { go savef.Close() }()
-		if err := gif.EncodeAll(savef, ui.cache); err != nil {
+		if err := gif.EncodeAll(savef, ui.cache.GIF); err != nil {
 			log.Printf("error: saving gif to %q: %v", path, err)
 		}
 		ui.cache = nil
 	}
 	if ui.Form.SubmitBtn.Clicked() {
+		ui.GifPlayer.Clear()
 		ui.Processing = true
 		var (
 			url  = ui.Form.URL.Text()
@@ -154,14 +163,18 @@ func (ui *UI) Update(gtx C) {
 			if err != nil {
 				log.Printf("error: decoding gif: %v", err)
 			}
-			ui.done <- img
+			ui.GifPlayer.FPS = fps
+			ui.done <- &PreparedGif{
+				GIF: img,
+				FPS: fps,
+			}
 		}()
 	}
 	select {
-	case g := <-ui.done:
-		ui.cache = g
+	case img := <-ui.done:
+		ui.cache = img
 		ui.Processing = false
-		ui.GifPlayer.Load(g)
+		ui.GifPlayer.Load(img)
 	default:
 	}
 }
@@ -313,18 +326,19 @@ func (f *Form) LayoutActions(gtx C, th *m.Theme) D {
 
 // GifPlayer animates through a series of frames.
 //
-// TODO(jfm): fix!
-// - playing way too fast
+// TODO(jfm): Fix artifacting from the ImageStack implementation.
+// TODO(jfm): Properly crop gif.
 type GifPlayer struct {
 	Frames []paint.ImageOp
-	Delays []time.Duration
 	Cursor int
+	FPS    float64
 	since  time.Time
 	img    widget.Image
 }
 
 // Load a Gif image to render.
-func (g *GifPlayer) Load(src *gif.GIF) {
+func (g *GifPlayer) Load(src *PreparedGif) {
+	g.FPS = float64(src.FPS)
 	g.Frames = make([]paint.ImageOp, len(src.Image))
 	for ii := range src.Image {
 		s := ImageStack{Config: src.Config}
@@ -333,22 +347,22 @@ func (g *GifPlayer) Load(src *gif.GIF) {
 		}
 		g.Frames[ii] = paint.NewImageOp(s)
 	}
-	g.Delays = make([]time.Duration, len(src.Delay))
-	for ii := range g.Delays {
-		// Gif delays are in 100th of a second.
-		g.Delays[ii] = time.Duration(src.Delay[ii]) / 10 * time.Millisecond
-	}
+}
+
+// Clear the player state.
+// Stops playing any current gif.
+func (g *GifPlayer) Clear() {
+	g.Frames = g.Frames[:]
+	g.Cursor = 0
+	g.FPS = 0
 }
 
 // Ready if the next frame is ready to be displayed.
 func (g *GifPlayer) Ready(gtx C) bool {
-	if len(g.Delays) == 0 {
-		return true
-	}
 	var (
 		now     = gtx.Now
 		since   = g.since
-		latency = g.Delays[g.Cursor]
+		latency = time.Second / time.Duration(g.FPS)
 	)
 	return now.Sub(since).Milliseconds() >= latency.Milliseconds()
 }
