@@ -158,10 +158,12 @@ func (ui *UI) Update(gtx C) {
 			)
 			if err != nil {
 				log.Printf("error: fetching gif: %v", err)
+				return
 			}
 			img, err := gif.DecodeAll(bytes.NewReader(g.Data))
 			if err != nil {
 				log.Printf("error: decoding gif: %v", err)
+				return
 			}
 			ui.GifPlayer.FPS = fps
 			ui.done <- &PreparedGif{
