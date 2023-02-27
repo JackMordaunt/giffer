@@ -24,3 +24,9 @@ Giffer provides a simple UI for converting slices of video to animated GIF image
 ### Install
 
 `go get github.com/jackmordaunt/giffer/cmd/gio`
+
+## Enhancements 
+
+- [ ] avoid downloading entire video
+  - only download the portion that is needed for the GIF 
+- [ ] show error toasts instead of just logging to console
