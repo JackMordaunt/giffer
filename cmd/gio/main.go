@@ -194,7 +194,7 @@ func (ui *UI) Layout(gtx C) D {
 						return l.Center.Layout(gtx, func(gtx C) D {
 							var (
 								cs  = &gtx.Constraints
-								max = gtx.Px(unit.Dp(400))
+								max = gtx.Dp(400)
 							)
 							if cs.Max.X > max {
 								cs.Max.X = max
@@ -222,7 +222,7 @@ func (ui *UI) Layout(gtx C) D {
 												Layout(gtx)
 										}),
 										l.Rigid(func(gtx C) D {
-											return D{Size: image.Point{X: gtx.Px(unit.Dp(10))}}
+											return D{Size: image.Point{X: 10}}
 										}),
 										l.Rigid(func(gtx C) D {
 											if ui.cache == nil {
@@ -237,7 +237,7 @@ func (ui *UI) Layout(gtx C) D {
 						})
 					}),
 					l.Rigid(func(gtx C) D {
-						return D{Size: image.Point{X: gtx.Px(unit.Dp(10))}}
+						return D{Size: image.Point{X: 10}}
 					}),
 					l.Flexed(1, func(gtx C) D {
 						return ui.GifPlayer.Layout(gtx)
@@ -259,8 +259,8 @@ func (ui *UI) Layout(gtx C) D {
 				return D{}
 			}
 			cs := &gtx.Constraints
-			cs.Max.X = gtx.Px(unit.Dp(50))
-			cs.Max.Y = gtx.Px(unit.Dp(50))
+			cs.Max.X = 50
+			cs.Max.Y = 50
 			return l.Center.Layout(gtx, func(gtx C) D {
 				return m.Loader(ui.Th).Layout(gtx)
 			})
@@ -304,7 +304,7 @@ func (f *Form) LayoutFields(gtx C, th *m.Theme) D {
 			return f.FPS.Layout(gtx, th, "fps (integer)")
 		}),
 		l.Rigid(func(gtx C) D {
-			return D{Size: image.Point{Y: gtx.Px(unit.Dp(10))}}
+			return D{Size: image.Point{Y: 10}}
 		}),
 	)
 }
@@ -318,7 +318,7 @@ func (f *Form) LayoutActions(gtx C, th *m.Theme) D {
 			return m.Button(th, &f.SubmitBtn, "Create").Layout(gtx)
 		}),
 		l.Rigid(func(gtx C) D {
-			return D{Size: image.Point{X: gtx.Px(unit.Dp(10))}}
+			return D{Size: image.Point{X: 10}}
 		}),
 		l.Rigid(func(gtx C) D {
 			return m.Button(th, &f.SaveBtn, "Save").Layout(gtx)
