@@ -1,6 +1,6 @@
 module github.com/jackmordaunt/giffer
 
-go 1.20
+go 1.25.0
 
 require (
 	gioui.org v0.0.0-20230224004350-5f818bc5e7f9
@@ -11,7 +11,7 @@ require (
 	github.com/kkdai/youtube/v2 v2.7.18
 	github.com/ncruces/zenity v0.10.6
 	github.com/pkg/errors v0.9.1
-	golang.org/x/crypto v0.6.0
+	golang.org/x/crypto v0.52.0
 )
 
 require (
@@ -37,8 +37,7 @@ require (
 	golang.org/x/exp v0.0.0-20230224173230-c95f2b4c22f2 // indirect
 	golang.org/x/exp/shiny v0.0.0-20230224173230-c95f2b4c22f2 // indirect
 	golang.org/x/image v0.5.0 // indirect
-	golang.org/x/net v0.7.0 // indirect
-	golang.org/x/sys v0.5.0 // indirect
-	golang.org/x/term v0.5.0 // indirect
-	golang.org/x/text v0.7.0 // indirect
+	golang.org/x/sys v0.45.0 // indirect
+	golang.org/x/term v0.43.0 // indirect
+	golang.org/x/text v0.37.0 // indirect
 )
